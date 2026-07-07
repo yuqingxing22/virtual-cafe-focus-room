@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "build:external-audio": "vite build && node scripts/prune-external-audio.mjs",
+    "preview": "vite preview",
+    "deploy:cloudflare": "npm run build:external-audio && npx wrangler pages deploy dist --project-name virtual-cafe-focus-room",
+    "upload:audio:r2": "scripts/upload-audio-r2.sh"
   },
   "dependencies": {
     "react": "^19.0.0",

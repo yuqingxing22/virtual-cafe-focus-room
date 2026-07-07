@@ -21,9 +21,39 @@ If `npm` is not installed on your Mac, use the project-local launcher instead:
 It downloads Node.js into `.local/` for this project and starts the app at
 `http://127.0.0.1:5173/`.
 
-## Publish on GitHub Pages
+## Recommended deployment
 
-This project is ready for GitHub Pages through `.github/workflows/pages.yml`.
+For public sharing, use Cloudflare Pages for the app and Cloudflare R2 for audio
+assets. This keeps the site deployment small while serving audio from object
+storage.
+
+See `docs/cloudflare-pages-r2.md`.
+
+Short version:
+
+```bash
+npx wrangler r2 bucket create virtual-cafe-focus-room-audio
+npm run upload:audio:r2 -- virtual-cafe-focus-room-audio
+```
+
+Then set this Cloudflare Pages environment variable:
+
+```text
+VITE_AUDIO_BASE_URL=https://YOUR_PUBLIC_AUDIO_BASE/
+```
+
+Use this Pages build command:
+
+```bash
+npm run build:external-audio
+```
+
+The app still falls back to local `public/audio/` when `VITE_AUDIO_BASE_URL` is
+not set, so local development does not require R2.
+
+## Current GitHub Pages fallback
+
+This project is also ready for GitHub Pages through `.github/workflows/pages.yml`.
 
 Create a GitHub repository named `virtual-cafe-focus-room` under `yuqingxing22`,
 then push the local `main` branch:
@@ -75,8 +105,7 @@ If a scene image is missing, the app falls back to `public/assets/cafe-room.png`
 ## Audio
 
 Original uploaded audio lives locally in `sound-effect/`. That folder is
-intentionally gitignored because it contains very large source recordings that
-are not needed for GitHub Pages.
+intentionally gitignored because it contains very large source recordings.
 
 The web app serves the copied browser assets from `public/audio/`:
 

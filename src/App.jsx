@@ -346,7 +346,6 @@ const COPY = {
       cafe: "Cafe",
       swing: "Swing",
       club: "Club",
-      youtube: "YouTube",
     },
     youtubeLabel: "YouTube station",
     youtubeStationsAria: "YouTube stations",
@@ -354,7 +353,7 @@ const COPY = {
     youtubePaste: "Paste a YouTube link",
     youtubeUse: "Play",
     youtubeInvalid: "That doesn't look like a YouTube video link.",
-    youtubeNote: "Volume follows the slider above. YouTube may play ads.",
+    youtubeNote: "Turning this up pauses the jazz. YouTube may play ads.",
     youtubeIdle: "Start ambience to play this station.",
     youtubeUnavailable:
       "This video can't play here. The owner may block other sites, or the stream has ended. Try another station or link.",
@@ -438,7 +437,6 @@ const COPY = {
       cafe: "咖啡馆",
       swing: "摇摆",
       club: "小酒馆",
-      youtube: "YouTube",
     },
     youtubeLabel: "YouTube 电台",
     youtubeStationsAria: "YouTube 电台列表",
@@ -446,7 +444,7 @@ const COPY = {
     youtubePaste: "粘贴一个 YouTube 链接",
     youtubeUse: "播放",
     youtubeInvalid: "这个看起来不是 YouTube 视频链接。",
-    youtubeNote: "音量跟随上面的滑块。YouTube 可能会插播广告。",
+    youtubeNote: "打开电台会自动关掉爵士。YouTube 可能会插播广告。",
     youtubeIdle: "开启环境音后开始播放。",
     youtubeUnavailable: "这个视频无法在这里播放，可能是作者禁止了外站播放，或者直播已经结束。换一个电台或链接试试。",
     sessionComplete: "专注完成",
@@ -520,7 +518,25 @@ const JAZZ_PLAYLISTS = {
 
 const getJazzPlaylist = (mode) => JAZZ_PLAYLISTS[mode] ?? JAZZ_PLAYLISTS.cafe;
 
-const JAZZ_MODES = ["cafe", "swing", "club", "youtube"];
+const JAZZ_MODES = ["cafe", "swing", "club"];
+
+// Jazz and the YouTube station share one music slot: raising one silences the other.
+const DEFAULT_MUSIC_LEVEL = 0.3;
+
+const readMusicSource = () => {
+  // Earlier builds stored "youtube" as a jazz mode; carry that preference over.
+  const legacy = readStored("cafe-focus-jazz-mode", "", () => true);
+  return readStored(
+    "cafe-focus-music-source",
+    legacy === "youtube" ? "youtube" : "jazz",
+    (value) => value === "jazz" || value === "youtube",
+  );
+};
+
+const applyMusicSource = (layers, source) =>
+  source === "youtube"
+    ? { ...layers, youtube: layers.jazz ?? 0, jazz: 0 }
+    : { ...layers, youtube: 0 };
 
 // 24/7 live streams, verified to play inside an embedded player on 2026-10-02.
 // Live stream IDs change when a channel restarts a stream; re-check if one stops working.
@@ -861,7 +877,10 @@ function App() {
   const endAtRef = useRef(null);
   const [messageIndex, setMessageIndex] = useState(0);
   const [sessionResult, setSessionResult] = useState(null);
-  const [layerMix, setLayerMix] = useState(SEATS[1].layers);
+  const [musicSource, setMusicSource] = useState(readMusicSource);
+  const [layerMix, setLayerMix] = useState(() =>
+    applyMusicSource(SEATS[1].layers, readMusicSource()),
+  );
   const [trafficMode, setTrafficMode] = useState("light");
   const [jazzMode, setJazzMode] = useState(() =>
     readStored("cafe-focus-jazz-mode", "cafe", (value) => JAZZ_MODES.includes(value)),
@@ -900,16 +919,15 @@ function App() {
     () => ({ traffic: trafficMode, jazz: jazzMode }),
     [trafficMode, jazzMode],
   );
-  // In YouTube mode the jazz slider drives the YouTube player, so the hosted playlist stays silent.
-  const audioLayers = useMemo(
-    () => (jazzMode === "youtube" ? { ...layerMix, jazz: 0 } : layerMix),
-    [layerMix, jazzMode],
-  );
-  const ambient = useAmbientAudio(audioLayers, ambientModes);
+  const ambient = useAmbientAudio(layerMix, ambientModes);
 
   useEffect(() => {
     writeStored("cafe-focus-jazz-mode", jazzMode);
   }, [jazzMode]);
+
+  useEffect(() => {
+    writeStored("cafe-focus-music-source", musicSource);
+  }, [musicSource]);
 
   useEffect(() => {
     writeStored("cafe-focus-youtube-id", youtubeId);
@@ -943,7 +961,10 @@ function App() {
 
   useEffect(() => {
     if (!selectedSeat) return;
-    setLayerMix(selectedSeat.layers);
+    // The seat preset puts music in the slot the user last preferred (jazz or YouTube).
+    setLayerMix(applyMusicSource(selectedSeat.layers, musicSource));
+    // Changing the preferred source later should not reset the whole mix.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSeat]);
 
   useEffect(() => {
@@ -1089,7 +1110,20 @@ function App() {
   };
 
   const updateLayer = (key, value) => {
-    setLayerMix((current) => ({ ...current, [key]: Number(value) }));
+    const level = Number(value);
+    setLayerMix((current) => {
+      const next = { ...current, [key]: level };
+      if (key === "youtube" && level > 0) next.jazz = 0;
+      if (key === "jazz" && level > 0) next.youtube = 0;
+      return next;
+    });
+    if (key === "youtube" && level > 0) setMusicSource("youtube");
+    if (key === "jazz" && level > 0) setMusicSource("jazz");
+  };
+
+  const chooseJazzMode = (mode) => {
+    setJazzMode(mode);
+    if ((layerMix.jazz ?? 0) <= 0) updateLayer("jazz", DEFAULT_MUSIC_LEVEL);
   };
 
   const renderScene = () => {
@@ -1421,9 +1455,9 @@ function App() {
                   onChange={(value) => updateLayer("backCounter", value)}
                 />
                 <SoundSlider
-                  icon={jazzMode === "youtube" ? <Radio aria-hidden="true" /> : <Music aria-hidden="true" />}
-                  label={jazzMode === "youtube" ? copy.youtubeLabel : copy.soundLabels.jazz}
-                  value={layerMix.jazz}
+                  icon={<Music aria-hidden="true" />}
+                  label={copy.soundLabels.jazz}
+                  value={layerMix.jazz ?? 0}
                   onChange={(value) => updateLayer("jazz", value)}
                 />
                 <div className="mode-buttons jazz-modes" aria-label={copy.jazzModeLabel}>
@@ -1433,13 +1467,19 @@ function App() {
                       key={mode}
                       type="button"
                       aria-pressed={jazzMode === mode}
-                      onClick={() => setJazzMode(mode)}
+                      onClick={() => chooseJazzMode(mode)}
                     >
                       {copy.jazzModes[mode]}
                     </button>
                   ))}
                 </div>
-                {jazzMode === "youtube" && (
+                <SoundSlider
+                  icon={<Radio aria-hidden="true" />}
+                  label={copy.youtubeLabel}
+                  value={layerMix.youtube ?? 0}
+                  onChange={(value) => updateLayer("youtube", value)}
+                />
+                {(layerMix.youtube ?? 0) > 0 && (
                   <div className="youtube-station">
                     <div className="station-list" aria-label={copy.youtubeStationsAria}>
                       {YOUTUBE_STATIONS.map((station) => (
@@ -1483,7 +1523,7 @@ function App() {
                     )}
                     <YouTubeStation
                       videoId={youtubeId}
-                      volume={layerMix.jazz}
+                      volume={layerMix.youtube ?? 0}
                       playing={ambient.enabled}
                       onUnavailable={setYoutubeUnavailableId}
                     />

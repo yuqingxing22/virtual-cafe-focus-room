@@ -770,6 +770,105 @@ h2 {
   accent-color: var(--amber);
 }
 
+.jazz-modes button {
+  padding: 0 6px;
+}
+
+.youtube-station {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(247, 239, 227, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 248, 237, 0.04);
+  padding: 12px;
+}
+
+.station-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.station-list button,
+.station-form button {
+  min-height: 30px;
+  border: 1px solid rgba(247, 239, 227, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 248, 237, 0.06);
+  color: var(--muted);
+  padding: 0 10px;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.station-list button.active {
+  border-color: rgba(216, 152, 69, 0.86);
+  background: rgba(216, 152, 69, 0.2);
+  color: var(--paper);
+}
+
+.station-form {
+  display: flex;
+  gap: 6px;
+}
+
+.station-form input {
+  min-width: 0;
+  flex: 1;
+  min-height: 32px;
+  border: 1px solid rgba(247, 239, 227, 0.18);
+  border-radius: 8px;
+  background: rgba(18, 15, 12, 0.5);
+  color: var(--paper);
+  padding: 0 10px;
+  font-size: 0.8rem;
+}
+
+.station-form input:focus {
+  border-color: rgba(216, 152, 69, 0.86);
+  outline: none;
+}
+
+.station-form input[aria-invalid="true"] {
+  border-color: #e0896b;
+}
+
+.station-form button {
+  border-radius: 8px;
+  background: var(--amber);
+  border-color: transparent;
+  color: #1c120b;
+}
+
+.station-error {
+  margin: 0;
+  color: #ffbfa8;
+  font-size: 0.78rem;
+}
+
+.youtube-frame {
+  width: 100%;
+  min-width: 200px;
+  height: 200px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #000;
+}
+
+.youtube-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.station-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
 .complete-panel {
   justify-self: center;
 }

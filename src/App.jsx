@@ -10,8 +10,10 @@ import {
   Keyboard,
   Laptop,
   MessageCircle,
+  Music,
   Pause,
   Play,
+  Radio,
   Square,
   TimerReset,
   Volume2,
@@ -344,7 +346,16 @@ const COPY = {
       cafe: "Cafe",
       swing: "Swing",
       club: "Club",
+      youtube: "YouTube",
     },
+    youtubeLabel: "YouTube station",
+    youtubeStationsAria: "YouTube stations",
+    youtubeCustom: "My link",
+    youtubePaste: "Paste a YouTube link",
+    youtubeUse: "Play",
+    youtubeInvalid: "That doesn't look like a YouTube video link.",
+    youtubeNote: "Volume follows the slider above. YouTube may play ads.",
+    youtubeIdle: "Start ambience to play this station.",
     sessionComplete: "Session complete",
     sessionEnded: "Session ended",
     stayedWith: (task) => `You stayed with “${task}.”`,
@@ -414,7 +425,16 @@ const COPY = {
       cafe: "咖啡馆",
       swing: "摇摆",
       club: "小酒馆",
+      youtube: "YouTube",
     },
+    youtubeLabel: "YouTube 电台",
+    youtubeStationsAria: "YouTube 电台列表",
+    youtubeCustom: "我的链接",
+    youtubePaste: "粘贴一个 YouTube 链接",
+    youtubeUse: "播放",
+    youtubeInvalid: "这个看起来不是 YouTube 视频链接。",
+    youtubeNote: "音量跟随上面的滑块。YouTube 可能会插播广告。",
+    youtubeIdle: "开启环境音后开始播放。",
     sessionComplete: "专注完成",
     sessionEnded: "专注结束",
     stayedWith: (task) => `你刚才一直和“${task}”待在一起。`,
@@ -474,6 +494,74 @@ const JAZZ_PLAYLISTS = {
 };
 
 const getJazzPlaylist = (mode) => JAZZ_PLAYLISTS[mode] ?? JAZZ_PLAYLISTS.cafe;
+
+const JAZZ_MODES = ["cafe", "swing", "club", "youtube"];
+
+// 24/7 live streams, checked 2026-10-02. Users can also paste any YouTube link.
+const YOUTUBE_STATIONS = [
+  { id: "Dx5qFachd3A", name: { en: "Jazz piano", zh: "爵士钢琴" } },
+  { id: "fEvM-OUbaKs", name: { en: "Coffee jazz", zh: "咖啡爵士" } },
+  { id: "HuFYqnbVbzY", name: { en: "Jazz lofi", zh: "爵士 lofi" } },
+  { id: "jfKfPfyJRdk", name: { en: "Lofi beats", zh: "lofi 节拍" } },
+];
+
+// YouTube volume is 0-100 and much louder than the ambience beds, so cap it.
+const YOUTUBE_MAX_VOLUME = 55;
+
+const parseYouTubeId = (input) => {
+  const value = input.trim();
+  const isId = (id) => /^[\w-]{11}$/.test(id ?? "");
+  if (isId(value)) return value;
+  try {
+    const url = new URL(value);
+    if (url.hostname.endsWith("youtu.be")) {
+      const id = url.pathname.slice(1, 12);
+      return isId(id) ? id : null;
+    }
+    const v = url.searchParams.get("v");
+    if (isId(v)) return v;
+    const match = url.pathname.match(/\/(?:live|embed|shorts)\/([\w-]{11})/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+};
+
+const readStored = (key, fallback, isValid) => {
+  try {
+    const value = window.localStorage.getItem(key);
+    return value && isValid(value) ? value : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const writeStored = (key, value) => {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Storage can be unavailable (private mode); the choice just won't persist.
+  }
+};
+
+let youTubeApiPromise = null;
+const loadYouTubeApi = () => {
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+  if (!youTubeApiPromise) {
+    youTubeApiPromise = new Promise((resolve) => {
+      const previous = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        previous?.();
+        resolve(window.YT);
+      };
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+      script.async = true;
+      document.head.appendChild(script);
+    });
+  }
+  return youTubeApiPromise;
+};
 
 const CUE_SOUNDS = {
   steps: audioPath("audio/steps-to-cafe.mp3"),
@@ -705,7 +793,14 @@ function App() {
   const [sessionResult, setSessionResult] = useState(null);
   const [layerMix, setLayerMix] = useState(SEATS[1].layers);
   const [trafficMode, setTrafficMode] = useState("light");
-  const [jazzMode, setJazzMode] = useState("cafe");
+  const [jazzMode, setJazzMode] = useState(() =>
+    readStored("cafe-focus-jazz-mode", "cafe", (value) => JAZZ_MODES.includes(value)),
+  );
+  const [youtubeId, setYoutubeId] = useState(() =>
+    readStored("cafe-focus-youtube-id", YOUTUBE_STATIONS[0].id, (value) => /^[\w-]{11}$/.test(value)),
+  );
+  const [youtubeInput, setYoutubeInput] = useState("");
+  const [youtubeError, setYoutubeError] = useState(false);
   const [intervention, setIntervention] = useState(null);
   const [pauseNudgeSeen, setPauseNudgeSeen] = useState(false);
 
@@ -728,7 +823,32 @@ function App() {
     () => ({ traffic: trafficMode, jazz: jazzMode }),
     [trafficMode, jazzMode],
   );
-  const ambient = useAmbientAudio(layerMix, ambientModes);
+  // In YouTube mode the jazz slider drives the YouTube player, so the hosted playlist stays silent.
+  const audioLayers = useMemo(
+    () => (jazzMode === "youtube" ? { ...layerMix, jazz: 0 } : layerMix),
+    [layerMix, jazzMode],
+  );
+  const ambient = useAmbientAudio(audioLayers, ambientModes);
+
+  useEffect(() => {
+    writeStored("cafe-focus-jazz-mode", jazzMode);
+  }, [jazzMode]);
+
+  useEffect(() => {
+    writeStored("cafe-focus-youtube-id", youtubeId);
+  }, [youtubeId]);
+
+  const submitYoutubeLink = (event) => {
+    event.preventDefault();
+    const id = parseYouTubeId(youtubeInput);
+    if (!id) {
+      setYoutubeError(true);
+      return;
+    }
+    setYoutubeError(false);
+    setYoutubeInput("");
+    setYoutubeId(id);
+  };
 
   useEffect(() => {
     window.localStorage.setItem("cafe-focus-language", lang);
@@ -857,7 +977,6 @@ function App() {
     setIntervention(null);
     setPauseNudgeSeen(false);
     setTrafficMode("light");
-    setJazzMode("cafe");
   };
 
   const updateLayer = (key, value) => {
@@ -1190,34 +1309,76 @@ function App() {
                   onChange={(value) => updateLayer("backCounter", value)}
                 />
                 <SoundSlider
-                  icon={<Coffee aria-hidden="true" />}
-                  label={copy.soundLabels.jazz}
+                  icon={jazzMode === "youtube" ? <Radio aria-hidden="true" /> : <Music aria-hidden="true" />}
+                  label={jazzMode === "youtube" ? copy.youtubeLabel : copy.soundLabels.jazz}
                   value={layerMix.jazz}
                   onChange={(value) => updateLayer("jazz", value)}
                 />
-                <div className="mode-buttons" aria-label={copy.jazzModeLabel}>
-                  <button
-                    className={jazzMode === "cafe" ? "active" : ""}
-                    type="button"
-                    onClick={() => setJazzMode("cafe")}
-                  >
-                    {copy.jazzModes.cafe}
-                  </button>
-                  <button
-                    className={jazzMode === "swing" ? "active" : ""}
-                    type="button"
-                    onClick={() => setJazzMode("swing")}
-                  >
-                    {copy.jazzModes.swing}
-                  </button>
-                  <button
-                    className={jazzMode === "club" ? "active" : ""}
-                    type="button"
-                    onClick={() => setJazzMode("club")}
-                  >
-                    {copy.jazzModes.club}
-                  </button>
+                <div className="mode-buttons jazz-modes" aria-label={copy.jazzModeLabel}>
+                  {JAZZ_MODES.map((mode) => (
+                    <button
+                      className={jazzMode === mode ? "active" : ""}
+                      key={mode}
+                      type="button"
+                      aria-pressed={jazzMode === mode}
+                      onClick={() => setJazzMode(mode)}
+                    >
+                      {copy.jazzModes[mode]}
+                    </button>
+                  ))}
                 </div>
+                {jazzMode === "youtube" && (
+                  <div className="youtube-station">
+                    <div className="station-list" aria-label={copy.youtubeStationsAria}>
+                      {YOUTUBE_STATIONS.map((station) => (
+                        <button
+                          className={youtubeId === station.id ? "active" : ""}
+                          key={station.id}
+                          type="button"
+                          aria-pressed={youtubeId === station.id}
+                          onClick={() => setYoutubeId(station.id)}
+                        >
+                          {station.name[lang]}
+                        </button>
+                      ))}
+                      {!YOUTUBE_STATIONS.some((station) => station.id === youtubeId) && (
+                        <button className="active" type="button" aria-pressed="true">
+                          {copy.youtubeCustom}
+                        </button>
+                      )}
+                    </div>
+                    <form className="station-form" onSubmit={submitYoutubeLink}>
+                      <input
+                        type="url"
+                        inputMode="url"
+                        value={youtubeInput}
+                        onChange={(event) => {
+                          setYoutubeInput(event.target.value);
+                          setYoutubeError(false);
+                        }}
+                        placeholder={copy.youtubePaste}
+                        aria-label={copy.youtubePaste}
+                        aria-invalid={youtubeError}
+                      />
+                      <button type="submit" disabled={!youtubeInput.trim()}>
+                        {copy.youtubeUse}
+                      </button>
+                    </form>
+                    {youtubeError && (
+                      <p className="station-error" role="alert">
+                        {copy.youtubeInvalid}
+                      </p>
+                    )}
+                    <YouTubeStation
+                      videoId={youtubeId}
+                      volume={layerMix.jazz}
+                      playing={ambient.enabled}
+                    />
+                    <p className="station-note">
+                      {ambient.enabled ? copy.youtubeNote : copy.youtubeIdle}
+                    </p>
+                  </div>
+                )}
               </div>
             </aside>
           </div>
@@ -1374,6 +1535,56 @@ function SceneBackdrop({ media }) {
       ))}
     </>
   );
+}
+
+// Visible embedded player (YouTube's terms require it to stay on screen, at least 200x200).
+function YouTubeStation({ videoId, volume, playing }) {
+  const hostRef = useRef(null);
+  const playerRef = useRef(null);
+  const loadedIdRef = useRef(videoId);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadYouTubeApi().then((YT) => {
+      if (cancelled || !hostRef.current) return;
+      const mount = document.createElement("div");
+      hostRef.current.appendChild(mount);
+      playerRef.current = new YT.Player(mount, {
+        width: "100%",
+        height: "100%",
+        videoId: loadedIdRef.current,
+        playerVars: { playsinline: 1, rel: 0 },
+        events: {
+          onReady: () => {
+            if (!cancelled) setReady(true);
+          },
+        },
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      playerRef.current?.destroy?.();
+      playerRef.current = null;
+      if (hostRef.current) hostRef.current.innerHTML = "";
+    };
+  }, []);
+
+  useEffect(() => {
+    const player = playerRef.current;
+    if (!ready || !player) return;
+    if (loadedIdRef.current !== videoId) {
+      loadedIdRef.current = videoId;
+      if (playing && volume > 0) player.loadVideoById(videoId);
+      else player.cueVideoById(videoId);
+    }
+    player.setVolume(Math.round(volume * YOUTUBE_MAX_VOLUME));
+    if (playing && volume > 0) player.playVideo();
+    else player.pauseVideo();
+  }, [ready, videoId, volume, playing]);
+
+  return <div className="youtube-frame" ref={hostRef} />;
 }
 
 function SoundSlider({ icon, label, value, onChange }) {

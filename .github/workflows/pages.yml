@@ -29,7 +29,10 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run build
+        env:
+          # Repository variable; audio is served from Cloudflare R2, not from this site.
+          VITE_AUDIO_BASE_URL: ${{ vars.VITE_AUDIO_BASE_URL }}
+        run: npm run build:external-audio
 
       - name: Deploy
         run: |

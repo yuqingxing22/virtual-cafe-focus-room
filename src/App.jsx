@@ -493,18 +493,51 @@ const createAudioElement = (src, loop = false) => {
   return audio;
 };
 
-const applyAmbientVolumes = (tracks, layers, ambientModes) => {
+const LONG_TRACK_SECONDS = 300;
+
+// Long field recordings start from a random point so sessions do not all open on the same sound.
+const randomizeStart = (audio) => {
+  const seek = () => {
+    if (!Number.isFinite(audio.duration) || audio.duration < LONG_TRACK_SECONDS) return;
+    audio.currentTime = Math.random() * (audio.duration - 60);
+  };
+  if (audio.readyState >= 1) {
+    seek();
+    return;
+  }
+  audio.addEventListener("loadedmetadata", seek, { once: true });
+};
+
+// Sets volumes, and only loads/plays a track once its volume is above zero.
+const syncAmbientTracks = (setup, layers, ambientModes) => {
   AMBIENT_TRACKS.forEach(({ key, layerKey, modeGroup, mode, maxVolume }) => {
-    if (!tracks[key]) return;
+    const audio = setup.tracks[key];
+    if (!audio) return;
     const level = layers[layerKey] ?? 0;
     const modeMultiplier = !mode || ambientModes[modeGroup] === mode ? 1 : 0;
-    tracks[key].volume = Math.max(0, Math.min(1, level * maxVolume * modeMultiplier));
+    const volume = Math.max(0, Math.min(1, level * maxVolume * modeMultiplier));
+    audio.volume = volume;
+    if (!setup.enabled) return;
+    if (volume <= 0) {
+      if (!audio.paused) audio.pause();
+      return;
+    }
+    if (!setup.started.has(key)) {
+      setup.started.add(key);
+      audio.load();
+      randomizeStart(audio);
+    }
+    if (audio.paused) {
+      void audio.play().catch(() => {});
+    }
   });
 };
 
 const applyJazzVolume = (jazz, layers) => {
   if (!jazz?.audio) return;
-  jazz.audio.volume = Math.max(0, Math.min(1, (layers.jazz ?? 0) * 0.32));
+  const volume = Math.max(0, Math.min(1, (layers.jazz ?? 0) * 0.32));
+  jazz.audio.volume = volume;
+  if (volume <= 0 && !jazz.audio.paused) jazz.audio.pause();
 };
 
 const setJazzPlaylist = (setup, mode) => {
@@ -561,16 +594,17 @@ const useAmbientAudio = (layers, ambientModes) => {
   const audioRef = useRef(null);
   const [enabled, setEnabled] = useState(false);
 
-  const ensureAudio = async () => {
+  const ensureAudio = () => {
     if (!audioRef.current) {
       const tracks = AMBIENT_TRACKS.reduce((items, track) => {
         items[track.key] = createAudioElement(track.src, true);
         return items;
       }, {});
       const jazzAudio = createAudioElement(getJazzPlaylist(ambientModes.jazz)[0], false);
-      const setup = {
+      const created = {
         enabled: false,
         tracks,
+        started: new Set(),
         jazz: {
           audio: jazzAudio,
           index: 0,
@@ -579,33 +613,29 @@ const useAmbientAudio = (layers, ambientModes) => {
       };
 
       const advanceJazz = () => {
-        const playlist = getJazzPlaylist(setup.jazz.mode);
-        setup.jazz.index = (setup.jazz.index + 1) % playlist.length;
-        setup.jazz.audio.src = playlist[setup.jazz.index];
-        setup.jazz.audio.load();
-        if (setup.enabled && setup.jazz.audio.volume > 0) {
-          void setup.jazz.audio.play().catch(() => {});
+        const playlist = getJazzPlaylist(created.jazz.mode);
+        created.jazz.index = (created.jazz.index + 1) % playlist.length;
+        created.jazz.audio.src = playlist[created.jazz.index];
+        created.jazz.audio.load();
+        if (created.enabled && created.jazz.audio.volume > 0) {
+          void created.jazz.audio.play().catch(() => {});
         }
       };
 
       jazzAudio.onended = advanceJazz;
 
-      audioRef.current = setup;
+      audioRef.current = created;
     }
 
-    audioRef.current.enabled = true;
-    setJazzPlaylist(audioRef.current, ambientModes.jazz);
-    applyAmbientVolumes(audioRef.current.tracks, layers, ambientModes);
-    applyJazzVolume(audioRef.current.jazz, layers);
-    Object.values(audioRef.current.tracks).forEach((audio) => {
-      audio.load();
-    });
-    audioRef.current.jazz.audio.load();
-    const playPromises = Object.values(audioRef.current.tracks).map((audio) => audio.play());
+    const setup = audioRef.current;
+    setup.enabled = true;
+    setJazzPlaylist(setup, ambientModes.jazz);
+    applyJazzVolume(setup.jazz, layers);
+    syncAmbientTracks(setup, layers, ambientModes);
     if ((layers.jazz ?? 0) > 0) {
-      playPromises.push(audioRef.current.jazz.audio.play());
+      setup.jazz.audio.load();
+      void setup.jazz.audio.play().catch(() => {});
     }
-    await Promise.allSettled(playPromises);
     setEnabled(true);
   };
 
@@ -624,8 +654,8 @@ const useAmbientAudio = (layers, ambientModes) => {
     const setup = audioRef.current;
     if (!setup) return;
     setJazzPlaylist(setup, ambientModes.jazz);
-    applyAmbientVolumes(setup.tracks, layers, ambientModes);
     applyJazzVolume(setup.jazz, layers);
+    syncAmbientTracks(setup, layers, ambientModes);
     if (setup.enabled) {
       playJazzIfNeeded(setup, layers);
     }
@@ -669,6 +699,8 @@ function App() {
   const [ritual, setRitual] = useState({ phone: false, laptop: false });
   const [remaining, setRemaining] = useState(45 * 60);
   const [isRunning, setIsRunning] = useState(false);
+  // Wall-clock end time of the running countdown; null while paused or idle.
+  const endAtRef = useRef(null);
   const [messageIndex, setMessageIndex] = useState(0);
   const [sessionResult, setSessionResult] = useState(null);
   const [layerMix, setLayerMix] = useState(SEATS[1].layers);
@@ -688,7 +720,7 @@ function App() {
   const sceneMedia = SCENE_MEDIA[sceneMediaKey] ?? SCENE_MEDIA.entrance;
   const effectiveDuration = useMemo(() => {
     const custom = Number(customDuration);
-    if (customDuration && Number.isFinite(custom) && custom > 0) return Math.min(custom, 180);
+    if (customDuration && Number.isFinite(custom) && custom >= 5) return Math.min(custom, 180);
     return duration;
   }, [customDuration, duration]);
 
@@ -705,27 +737,41 @@ function App() {
   }, [copy.appName, lang]);
 
   useEffect(() => {
+    if (scene !== "focus") return undefined;
+    document.title = `${formatTime(remaining)} · ${task.trim() || copy.appName}`;
+    return () => {
+      document.title = copy.appName;
+    };
+  }, [scene, remaining, task, copy.appName]);
+
+  useEffect(() => {
     if (!selectedSeat) return;
     setLayerMix(selectedSeat.layers);
   }, [selectedSeat]);
 
   useEffect(() => {
-    if (scene !== "focus" || !isRunning || remaining <= 0) return undefined;
+    if (scene !== "focus" || !isRunning) return undefined;
+    if (endAtRef.current === null) {
+      endAtRef.current = Date.now() + remaining * 1000;
+    }
 
-    const timer = window.setInterval(() => {
-      setRemaining((value) => {
-        if (value <= 1) {
-          setIsRunning(false);
-          setSessionResult("completed");
-          setScene("complete");
-          return 0;
-        }
-        return value - 1;
-      });
-    }, 1000);
+    // Derive remaining time from the wall clock so background-tab throttling cannot drift it.
+    const tick = () => {
+      if (endAtRef.current === null) return;
+      const next = Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000));
+      setRemaining(next);
+      if (next <= 0) completeSession();
+    };
 
-    return () => window.clearInterval(timer);
-  }, [scene, isRunning, remaining]);
+    const timer = window.setInterval(tick, 500);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", tick);
+    };
+    // `remaining` only seeds endAt when the countdown (re)starts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scene, isRunning]);
 
   useEffect(() => {
     if (scene !== "focus" || !isRunning) return undefined;
@@ -752,6 +798,7 @@ function App() {
   const startFocus = () => {
     const seconds = effectiveDuration * 60;
     playCue(CUE_SOUNDS.cupSetDown, 0.4);
+    endAtRef.current = Date.now() + seconds * 1000;
     setRemaining(seconds);
     setMessageIndex(0);
     setIsRunning(true);
@@ -761,7 +808,32 @@ function App() {
     setScene("focus");
   };
 
+  const pauseFocus = () => {
+    if (endAtRef.current !== null) {
+      setRemaining(Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000)));
+    }
+    endAtRef.current = null;
+    setIsRunning(false);
+  };
+
+  const resumeFocus = () => {
+    setIntervention(null);
+    setIsRunning(true);
+  };
+
+  const completeSession = () => {
+    endAtRef.current = null;
+    setRemaining(0);
+    setIsRunning(false);
+    ambient.stopAudio();
+    playCue(CUE_SOUNDS.door, 0.3);
+    setSessionResult("completed");
+    setIntervention(null);
+    setScene("complete");
+  };
+
   const endSession = () => {
+    endAtRef.current = null;
     setIsRunning(false);
     ambient.stopAudio();
     setSessionResult(remaining === 0 ? "completed" : "ended");
@@ -770,6 +842,7 @@ function App() {
   };
 
   const resetCafe = () => {
+    endAtRef.current = null;
     ambient.stopAudio();
     setScene("entrance");
     setDrink(null);
@@ -1017,10 +1090,7 @@ function App() {
                   <button
                     className="secondary-action"
                     type="button"
-                    onClick={() => {
-                      setIntervention(null);
-                      setIsRunning(true);
-                    }}
+                    onClick={resumeFocus}
                   >
                     {copy.returnToTask}
                   </button>
@@ -1028,7 +1098,7 @@ function App() {
               )}
               <div className="focus-actions">
                 {isRunning ? (
-                  <button className="icon-action" type="button" onClick={() => setIsRunning(false)}>
+                  <button className="icon-action" type="button" onClick={pauseFocus}>
                     <Pause aria-hidden="true" />
                     {copy.pause}
                   </button>
@@ -1036,10 +1106,7 @@ function App() {
                   <button
                     className="icon-action"
                     type="button"
-                    onClick={() => {
-                      setIntervention(null);
-                      setIsRunning(true);
-                    }}
+                    onClick={resumeFocus}
                   >
                     <Play aria-hidden="true" />
                     {copy.resume}

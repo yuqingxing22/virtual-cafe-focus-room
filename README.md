@@ -21,53 +21,15 @@ If `npm` is not installed on your Mac, use the project-local launcher instead:
 It downloads Node.js into `.local/` for this project and starts the app at
 `http://127.0.0.1:5173/`.
 
-## Recommended deployment
+## Deployment
 
-For public sharing, use Cloudflare Pages for the app and Cloudflare R2 for audio
-assets. This keeps the site deployment small while serving audio from object
-storage.
+The app is served by GitHub Pages at `https://cafe.tempomyplanner.com/` (custom domain, see `public/CNAME`). Audio is served from Cloudflare R2 at `https://audio.tempomyplanner.com/`, so site deploys stay small and audio bandwidth is unmetered.
 
-See `docs/cloudflare-pages-r2.md`.
+- Pushing to `main` runs `.github/workflows/pages.yml`. It builds with `npm run build:external-audio` and the repository variable `VITE_AUDIO_BASE_URL`, then force-pushes `dist/` to the `gh-pages` branch. The build fails on purpose if the variable is missing.
+- Audio is uploaded separately with `npm run upload:audio:r2 -- virtual-cafe-focus-room-audio`.
+- Local development ignores the variable and falls back to `public/audio/`.
 
-Short version:
-
-```bash
-npx wrangler r2 bucket create virtual-cafe-focus-room-audio
-npm run upload:audio:r2 -- virtual-cafe-focus-room-audio
-```
-
-Then set this Cloudflare Pages environment variable:
-
-```text
-VITE_AUDIO_BASE_URL=https://YOUR_PUBLIC_AUDIO_BASE/
-```
-
-Use this Pages build command:
-
-```bash
-npm run build:external-audio
-```
-
-The app still falls back to local `public/audio/` when `VITE_AUDIO_BASE_URL` is
-not set, so local development does not require R2.
-
-## Current GitHub Pages fallback
-
-This project is also ready for GitHub Pages through `.github/workflows/pages.yml`.
-
-Create a GitHub repository named `virtual-cafe-focus-room` under `yuqingxing22`,
-then push the local `main` branch:
-
-```bash
-git remote add origin git@github.com:yuqingxing22/virtual-cafe-focus-room.git
-git push -u origin main
-```
-
-After the deploy workflow finishes, the page URL will be:
-
-```text
-https://yuqingxing22.github.io/virtual-cafe-focus-room/
-```
+One-time setup and troubleshooting: `docs/cloudflare-pages-r2.md`.
 
 ## Features
 

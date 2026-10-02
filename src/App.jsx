@@ -364,6 +364,17 @@ const COPY = {
     completedLine: (minutes) => `You worked for ${minutes} minutes. That counts.`,
     endedLine: "Your table is still here when you want to come back.",
     visitAgain: "Visit again",
+    visitEyebrow: (n) => `Welcome back · visit ${n}`,
+    stampCard: "Stamp card",
+    cardNumber: (n) => `card ${n}`,
+    stampsAria: (filled, total) => `${filled} of ${total} stamps`,
+    visitTotal: (n) => (n === 1 ? "1 visit" : `${n} visits`),
+    totalFocused: (time) => `${time} focused in all`,
+    stampEarned: "One more stamp on your card.",
+    stampMissed: "Stamps come with 10 minutes or a finished session.",
+    cardFull: "Card complete. A fresh one next time.",
+    hoursMinutes: (h, m) => (m ? `${h} h ${m} min` : `${h} h`),
+    minutesOnly: (m) => `${m} min`,
   },
   zh: {
     appName: "云咖啡馆专注室",
@@ -444,6 +455,17 @@ const COPY = {
     completedLine: (minutes) => `你专注了 ${minutes} 分钟。这已经算数。`,
     endedLine: "你的座位还在这里。想回来时可以再回来。",
     visitAgain: "下次再来",
+    visitEyebrow: (n) => `欢迎回来 · 第 ${n} 次来`,
+    stampCard: "集点卡",
+    cardNumber: (n) => `第 ${n} 张`,
+    stampsAria: (filled, total) => `已集 ${filled} 个章，共 ${total} 格`,
+    visitTotal: (n) => `已来过 ${n} 次`,
+    totalFocused: (time) => `累计专注 ${time}`,
+    stampEarned: "卡上多了一个章。",
+    stampMissed: "专注满 10 分钟或完成一次就能盖章。",
+    cardFull: "这张卡集满了，下次换一张新的。",
+    hoursMinutes: (h, m) => (m ? `${h} 小时 ${m} 分钟` : `${h} 小时`),
+    minutesOnly: (m) => `${m} 分钟`,
   },
 };
 
@@ -556,6 +578,40 @@ const writeStored = (key, value) => {
   } catch {
     // Storage can be unavailable (private mode); the choice just won't persist.
   }
+};
+
+// Visit history for the stamp card. One entry per session that lasted at least a minute.
+const VISITS_KEY = "cafe-focus-visits";
+const STAMPS_PER_CARD = 10;
+const STAMP_MINUTES = 10;
+const MAX_STORED_VISITS = 500;
+
+const readVisits = () => {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(VISITS_KEY) ?? "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item) => item && typeof item.at === "string" && Number.isFinite(item.minutes),
+    );
+  } catch {
+    return [];
+  }
+};
+
+const writeVisits = (visits) => {
+  try {
+    window.localStorage.setItem(VISITS_KEY, JSON.stringify(visits.slice(-MAX_STORED_VISITS)));
+  } catch {
+    // Storage unavailable; the card just won't persist.
+  }
+};
+
+const countStamps = (visits) => visits.filter((item) => item.stamp).length;
+
+const formatMinutes = (minutes, copy) => {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return hours > 0 ? copy.hoursMinutes(hours, rest) : copy.minutesOnly(rest);
 };
 
 let youTubeApiPromise = null;
@@ -819,6 +875,9 @@ function App() {
   const [youtubeInput, setYoutubeInput] = useState("");
   const [youtubeError, setYoutubeError] = useState(false);
   const [youtubeUnavailableId, setYoutubeUnavailableId] = useState(null);
+  const [visits, setVisits] = useState(readVisits);
+  // The visit recorded by the session that just ended, shown on the complete scene.
+  const [lastVisit, setLastVisit] = useState(null);
   const [intervention, setIntervention] = useState(null);
   const [pauseNudgeSeen, setPauseNudgeSeen] = useState(false);
 
@@ -959,22 +1018,53 @@ function App() {
     setIsRunning(true);
   };
 
+  const currentRemaining = () =>
+    endAtRef.current === null
+      ? remaining
+      : Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000));
+
+  const recordVisit = (completed, elapsedSeconds) => {
+    const minutes = Math.floor(elapsedSeconds / 60);
+    if (minutes < 1) {
+      setLastVisit(null);
+      return;
+    }
+    const entry = {
+      at: new Date().toISOString(),
+      minutes,
+      task: task.trim(),
+      seat: selectedSeat?.id ?? null,
+      drink: selectedDrink?.id ?? null,
+      completed,
+      stamp: completed || minutes >= STAMP_MINUTES,
+    };
+    setVisits((current) => {
+      const next = [...current, entry];
+      writeVisits(next);
+      return next;
+    });
+    setLastVisit(entry);
+  };
+
   const completeSession = () => {
     endAtRef.current = null;
     setRemaining(0);
     setIsRunning(false);
     ambient.stopAudio();
     playCue(CUE_SOUNDS.door, 0.3);
+    recordVisit(true, effectiveDuration * 60);
     setSessionResult("completed");
     setIntervention(null);
     setScene("complete");
   };
 
   const endSession = () => {
+    const left = currentRemaining();
     endAtRef.current = null;
     setIsRunning(false);
     ambient.stopAudio();
-    setSessionResult(remaining === 0 ? "completed" : "ended");
+    recordVisit(left === 0, effectiveDuration * 60 - left);
+    setSessionResult(left === 0 ? "completed" : "ended");
     setIntervention(null);
     setScene("complete");
   };
@@ -982,6 +1072,7 @@ function App() {
   const resetCafe = () => {
     endAtRef.current = null;
     ambient.stopAudio();
+    setLastVisit(null);
     setScene("entrance");
     setDrink(null);
     setSeat(null);
@@ -1006,7 +1097,9 @@ function App() {
       return (
         <section className="scene entrance-scene" aria-labelledby="entrance-title">
           <div className="hero-copy">
-            <p className="eyebrow">{copy.entranceEyebrow}</p>
+            <p className="eyebrow">
+              {visits.length > 0 ? copy.visitEyebrow(visits.length + 1) : copy.entranceEyebrow}
+            </p>
             <h1 id="entrance-title">{copy.entranceTitle}</h1>
             <p className="scene-lede">{copy.entranceLead}</p>
             <button
@@ -1022,6 +1115,7 @@ function App() {
               <DoorOpen aria-hidden="true" />
               {copy.enterCafe}
             </button>
+            {visits.length > 0 && <StampCard visits={visits} copy={copy} />}
           </div>
           <div className="presence-strip" aria-label={copy.presenceAria}>
             {copy.presence.map((item) => (
@@ -1421,6 +1515,14 @@ function App() {
               ? copy.completedLine(effectiveDuration)
               : copy.endedLine}
           </p>
+          {lastVisit && (
+            <StampCard
+              visits={visits}
+              copy={copy}
+              highlightLast={lastVisit.stamp}
+              note={lastVisit.stamp ? copy.stampEarned : copy.stampMissed}
+            />
+          )}
           <div className="scene-actions">
             <button className="primary-action compact" type="button" onClick={resetCafe}>
               <TimerReset aria-hidden="true" />
@@ -1559,6 +1661,45 @@ function SceneBackdrop({ media }) {
         />
       ))}
     </>
+  );
+}
+
+function StampCard({ visits, copy, highlightLast = false, note = null }) {
+  const stamps = countStamps(visits);
+  const filled = stamps === 0 ? 0 : ((stamps - 1) % STAMPS_PER_CARD) + 1;
+  const cardNumber = Math.max(1, Math.ceil(stamps / STAMPS_PER_CARD));
+  const isFull = stamps > 0 && filled === STAMPS_PER_CARD;
+  const totalMinutes = visits.reduce((sum, item) => sum + item.minutes, 0);
+
+  return (
+    <section className="stamp-card" aria-label={copy.stampCard}>
+      <div className="stamp-card-head">
+        <span>
+          {copy.stampCard} · {copy.cardNumber(cardNumber)}
+        </span>
+        <strong>
+          {filled} / {STAMPS_PER_CARD}
+        </strong>
+      </div>
+      <div className="stamp-row" role="img" aria-label={copy.stampsAria(filled, STAMPS_PER_CARD)}>
+        {Array.from({ length: STAMPS_PER_CARD }, (_, index) => {
+          const isFilled = index < filled;
+          const isNew = highlightLast && isFilled && index === filled - 1;
+          return (
+            <span
+              className={`stamp${isFilled ? " filled" : ""}${isNew ? " new" : ""}`}
+              key={index}
+            >
+              {isFilled && <Coffee aria-hidden="true" />}
+            </span>
+          );
+        })}
+      </div>
+      <p className="stamp-meta">
+        {copy.visitTotal(visits.length)} · {copy.totalFocused(formatMinutes(totalMinutes, copy))}
+      </p>
+      {(note || isFull) && <p className="stamp-note">{isFull ? copy.cardFull : note}</p>}
+    </section>
   );
 }
 

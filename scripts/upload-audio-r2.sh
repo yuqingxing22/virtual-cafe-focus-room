@@ -31,6 +31,5 @@ find public/audio -type f | sort | while IFS= read -r file; do
     --file "$file" \
     --content-type "$content_type" \
     --cache-control "public, max-age=31536000, immutable" \
-    --remote \
-    --force
+    --remote
 done

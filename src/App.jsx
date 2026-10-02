@@ -356,6 +356,8 @@ const COPY = {
     youtubeInvalid: "That doesn't look like a YouTube video link.",
     youtubeNote: "Volume follows the slider above. YouTube may play ads.",
     youtubeIdle: "Start ambience to play this station.",
+    youtubeUnavailable:
+      "This video can't play here. The owner may block other sites, or the stream has ended. Try another station or link.",
     sessionComplete: "Session complete",
     sessionEnded: "Session ended",
     stayedWith: (task) => `You stayed with “${task}.”`,
@@ -435,6 +437,7 @@ const COPY = {
     youtubeInvalid: "这个看起来不是 YouTube 视频链接。",
     youtubeNote: "音量跟随上面的滑块。YouTube 可能会插播广告。",
     youtubeIdle: "开启环境音后开始播放。",
+    youtubeUnavailable: "这个视频无法在这里播放，可能是作者禁止了外站播放，或者直播已经结束。换一个电台或链接试试。",
     sessionComplete: "专注完成",
     sessionEnded: "专注结束",
     stayedWith: (task) => `你刚才一直和“${task}”待在一起。`,
@@ -497,13 +500,24 @@ const getJazzPlaylist = (mode) => JAZZ_PLAYLISTS[mode] ?? JAZZ_PLAYLISTS.cafe;
 
 const JAZZ_MODES = ["cafe", "swing", "club", "youtube"];
 
-// 24/7 live streams, checked 2026-10-02. Users can also paste any YouTube link.
+// 24/7 live streams, verified to play inside an embedded player on 2026-10-02.
+// Live stream IDs change when a channel restarts a stream; re-check if one stops working.
+// Users can also paste any YouTube link.
 const YOUTUBE_STATIONS = [
   { id: "Dx5qFachd3A", name: { en: "Jazz piano", zh: "爵士钢琴" } },
   { id: "fEvM-OUbaKs", name: { en: "Coffee jazz", zh: "咖啡爵士" } },
-  { id: "HuFYqnbVbzY", name: { en: "Jazz lofi", zh: "爵士 lofi" } },
-  { id: "jfKfPfyJRdk", name: { en: "Lofi beats", zh: "lofi 节拍" } },
+  { id: "E2vONfzoyRI", name: { en: "Jazz lofi", zh: "爵士 lofi" } },
+  { id: "5yx6BWlEVcY", name: { en: "Lofi beats", zh: "lofi 节拍" } },
 ];
+
+// Old preset IDs that were saved in visitors' browsers but no longer play embedded.
+const RETIRED_YOUTUBE_IDS = {
+  HuFYqnbVbzY: "E2vONfzoyRI",
+  jfKfPfyJRdk: "5yx6BWlEVcY",
+};
+
+// IFrame API error codes: 2 bad id, 5 HTML5 error, 100 removed/private, 101/150 embedding blocked.
+const YOUTUBE_ERROR_CODES = [2, 5, 100, 101, 150];
 
 // YouTube volume is 0-100 and much louder than the ambience beds, so cap it.
 const YOUTUBE_MAX_VOLUME = 55;
@@ -796,11 +810,15 @@ function App() {
   const [jazzMode, setJazzMode] = useState(() =>
     readStored("cafe-focus-jazz-mode", "cafe", (value) => JAZZ_MODES.includes(value)),
   );
-  const [youtubeId, setYoutubeId] = useState(() =>
-    readStored("cafe-focus-youtube-id", YOUTUBE_STATIONS[0].id, (value) => /^[\w-]{11}$/.test(value)),
-  );
+  const [youtubeId, setYoutubeId] = useState(() => {
+    const stored = readStored("cafe-focus-youtube-id", YOUTUBE_STATIONS[0].id, (value) =>
+      /^[\w-]{11}$/.test(value),
+    );
+    return RETIRED_YOUTUBE_IDS[stored] ?? stored;
+  });
   const [youtubeInput, setYoutubeInput] = useState("");
   const [youtubeError, setYoutubeError] = useState(false);
+  const [youtubeUnavailableId, setYoutubeUnavailableId] = useState(null);
   const [intervention, setIntervention] = useState(null);
   const [pauseNudgeSeen, setPauseNudgeSeen] = useState(false);
 
@@ -1373,10 +1391,17 @@ function App() {
                       videoId={youtubeId}
                       volume={layerMix.jazz}
                       playing={ambient.enabled}
+                      onUnavailable={setYoutubeUnavailableId}
                     />
-                    <p className="station-note">
-                      {ambient.enabled ? copy.youtubeNote : copy.youtubeIdle}
-                    </p>
+                    {youtubeUnavailableId === youtubeId ? (
+                      <p className="station-error" role="alert">
+                        {copy.youtubeUnavailable}
+                      </p>
+                    ) : (
+                      <p className="station-note">
+                        {ambient.enabled ? copy.youtubeNote : copy.youtubeIdle}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -1538,10 +1563,12 @@ function SceneBackdrop({ media }) {
 }
 
 // Visible embedded player (YouTube's terms require it to stay on screen, at least 200x200).
-function YouTubeStation({ videoId, volume, playing }) {
+function YouTubeStation({ videoId, volume, playing, onUnavailable }) {
   const hostRef = useRef(null);
   const playerRef = useRef(null);
   const loadedIdRef = useRef(videoId);
+  const onUnavailableRef = useRef(onUnavailable);
+  onUnavailableRef.current = onUnavailable;
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -1558,6 +1585,11 @@ function YouTubeStation({ videoId, volume, playing }) {
         events: {
           onReady: () => {
             if (!cancelled) setReady(true);
+          },
+          onError: (event) => {
+            if (!cancelled && YOUTUBE_ERROR_CODES.includes(event.data)) {
+              onUnavailableRef.current?.(loadedIdRef.current);
+            }
           },
         },
       });

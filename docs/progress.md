@@ -4,14 +4,14 @@
 
 ## 当前状态（更新于 2026-10-02）
 
-- **线上**：https://cafe.tempomyplanner.com/ ，GitHub Pages 托管，自定义域名在 `public/CNAME`。推 `main` 触发 `.github/workflows/pages.yml`，构建后强推到 `gh-pages` 分支，再由 GitHub 的 `pages build and deployment` 发布。两个加起来约一分半。
+- **线上**：https://cafe.tempomyplanner.com/ ，已公开给真实用户。GitHub Pages 托管，自定义域名在 `public/CNAME`。`main` 有分支保护，只能通过 PR 合并；合并到 `main` 触发 `.github/workflows/pages.yml`，构建后强推到 `gh-pages` 分支，再由 GitHub 的 `pages build and deployment` 发布。两个加起来约一分半。
 - **音频**：Cloudflare R2 bucket `virtual-cafe-focus-room-audio`，自定义域名 https://audio.tempomyplanner.com/ ，24 个文件全部在线，对象 key 以 `audio/` 开头。GitHub 仓库变量 `VITE_AUDIO_BASE_URL` 指向这个域名，构建时写进代码。本地开发不设这个变量，回落到 `public/audio/`。
 - **代码结构**（2026-10-03 拆分后）：`src/App.jsx` 只剩状态和五个场景的 JSX（约 770 行）；`src/data/` 放饮品、座位、场景图、文案；`src/lib/` 放路径、localStorage、集点卡、音乐槽位、YouTube 工具和格式化；`src/audio/` 放音轨表和 `useAmbientAudio`；`src/components/` 放背景图、集点卡、YouTube 播放器、滑块。样式仍在 `src/styles.css`。React 19、Vite 8、lucide-react 图标。没有测试；lint 用 scratchpad 里临时装的 ESLint 8 跑 `no-undef` 检查。
 - **浏览器验证方式**：`npm run build` 后 `npx vite preview --port 4173 --strictPort`，用 Playwright 或 Chrome 打开 http://localhost:4173/ 。之前的 session 用 `page.evaluate` 里按按钮文字点击的方式走完整流程，用覆盖 `Date.now` 的办法快进倒计时。
 
 ## 工作约定
 
-- 一次只做一项，做完就提交推送，不攒。
+- 一次只做一项，开分支、开 PR、CI 通过后合并，不直接推 `main`（流程见 `AGENTS.md`）。
 - 提交信息用英文，结尾按当前 session 的 attribution 提示加 `Co-Authored-By` 行。
 - 文档用中文，markdown 不硬换行，每段一行。
 - 产品语气是「轻、不责备、把人带回任务」，新文案要跟这个调子，中英文都要写（`COPY` 对象）。
@@ -19,10 +19,43 @@
 - 替换已有音频文件要改文件名，因为 R2 上设了一年不可变缓存。
 - 大于 30 MB 的文件用 wrangler 命令行传 R2 会在几秒内断线，改用 Cloudflare 控制台网页上传。
 - 音乐只有一个槽位：爵士和 YouTube 电台互斥，`updateLayer` 里处理。新增别的音乐源也要遵守这条。
-- 改动日志里的 commit 号是代码提交的号，日志本身在代码提交之后单独提交一次。
+- 改动日志写 PR 号，日志和代码放在同一个 PR 里。2026-10-03 及之前的条目是直接推 main 时期留下的 commit 号。
 - YouTube 预设电台必须在嵌入播放器里实际播一下才算可用。oembed 返回 200 不代表能嵌入，error 150 表示作者禁止外站播放。直播 ID 会随频道重开直播而变。
 
+## 回滚
+
+线上出问题时先回滚，再查原因。两种办法，从快到慢：
+
+1. **重新部署上一个好版本（约一分半，不改代码）**。找到上一次成功的部署，重跑它，它会用那个提交重新构建并发布：
+
+   ```bash
+   gh run list --workflow pages.yml --limit 5
+   gh run rerun <上一个好版本的 run id>
+   ```
+
+   这只是把线上换回旧版本，`main` 上的坏提交还在，下一次合并又会把它带上线，所以之后要做第 2 步。
+
+2. **撤销坏提交**。开分支 revert，走正常 PR：
+
+   ```bash
+   git checkout main && git pull
+   git checkout -b fix/revert-<简述>
+   git revert <坏提交的 sha>
+   git push -u origin HEAD && gh pr create --fill
+   ```
+
+   CI 通过后合并，自动部署。
+
+音频出问题（R2 或 `audio.tempomyplanner.com` 不通）时网站本身照常可用，只是没有环境音，不需要回滚代码。先看 Cloudflare 控制台里 bucket 的自定义域名状态。
+
+如果分支保护本身挡住了紧急修复，仓库管理员可以临时关掉：`gh api -X DELETE repos/yuqingxing22/virtual-cafe-focus-room/branches/main/protection`。修完按 `docs/progress.md` 2026-10-04 的日志重新打开。
+
 ## 改动日志
+
+### 2026-10-04
+
+- PR #1 Launch prep。YouTube 嵌入改用 `youtube-nocookie.com`；入口页加一行「记录只存在这个浏览器里」和隐私说明、反馈链接，新增 `public/privacy.html`；`ErrorBoundary` 在渲染出错时显示重新加载页；可选的 Cloudflare Web Analytics，只有构建时设了 `VITE_CF_ANALYTICS_TOKEN` 才加载；Open Graph 和 Twitter 标签加 `og-image.jpg`；`404.html` 和 `robots.txt`；`ci.yml` 给每个 PR 跑构建；`AGENTS.md` 和新版 `CLAUDE.md` 规定分支加 PR 的流程；`docs/audio-credits.md` 等用户填。
+- 合并 PR #1 之后给 `main` 打开分支保护：必须走 PR、必须通过 `build` 检查、对管理员同样生效、不要求审批人数。命令：`gh api -X PUT repos/yuqingxing22/virtual-cafe-focus-room/branches/main/protection --input scripts/branch-protection.json`。
 
 ### 2026-10-03
 
@@ -59,23 +92,23 @@
 
 必须先处理：
 
-1. **保护 main，改成分支加 PR 的流程**。main 一推就上线，两个 AI 同时推风险太大。加 CI 构建检查、分支保护、给 ChatGPT 看的 `AGENTS.md`。状态：待做。
+1. **保护 main，改成分支加 PR 的流程**。main 一推就上线，两个 AI 同时推风险太大。加 CI 构建检查、分支保护、给 ChatGPT 看的 `AGENTS.md`。状态：完成（PR #1，2026-10-04）。
 2. **确认音频和爵士乐的授权**。仓库和网站都是公开的，每个音频来源要允许公开网站使用，记在 `docs/audio-credits.md`。Claude 建好表格，来源只有用户能填。状态：等用户。
-3. **隐私说明**。YouTube 嵌入换成 youtube-nocookie.com；页脚加一句数据只存本地、电台由 YouTube 提供。状态：待做。
+3. **隐私说明**。YouTube 嵌入换成 youtube-nocookie.com；入口页加一句数据只存本地，详细说明在 `public/privacy.html`。状态：完成（PR #1）。
 
 上线后立刻需要：
 
-4. **访问统计**。Cloudflare Web Analytics，免费、不用 cookie。代码读 `VITE_CF_ANALYTICS_TOKEN`，token 要用户在 Cloudflare 控制台生成。状态：待做（代码），等用户（token）。
-5. **错误兜底和监控**。先加 React 错误边界，页面崩了显示「重新加载」而不是白屏；远程错误上报（Sentry 之类）等用户决定要不要。状态：待做。
-6. **反馈入口**。页脚链接到 GitHub Issues，不公开用户的个人邮箱。状态：待做。
+4. **访问统计**。Cloudflare Web Analytics，免费、不用 cookie。代码读 `VITE_CF_ANALYTICS_TOKEN`，token 要用户在 Cloudflare 控制台生成。状态：代码完成（PR #1），等用户在 Cloudflare 生成 token 并设为仓库变量 `VITE_CF_ANALYTICS_TOKEN`。
+5. **错误兜底和监控**。先加 React 错误边界，页面崩了显示「重新加载」而不是白屏；远程错误上报（Sentry 之类）等用户决定要不要。状态：错误边界完成（PR #1），远程上报等用户。
+6. **反馈入口**。入口页链接到 GitHub Issues，不公开用户的个人邮箱。状态：完成（PR #1）。
 7. **在线监控**。UptimeRobot 免费档监控 `cafe.tempomyplanner.com` 和 `audio.tempomyplanner.com`。状态：等用户。
 8. **R2 用量**。两条 `.m4a` 街声没有走 Cloudflare 缓存（`cf-cache-status: DYNAMIC`），mp3 是走的。需要在 Cloudflare 加一条缓存规则并设用量通知。状态：等用户（控制台）。
 
 收尾：
 
-9. **分享预览**。Open Graph 和 Twitter 标签，1200x630 预览图。状态：待做。
-10. **404 页面和 robots.txt**。状态：待做。
-11. **回滚预案**。写进本文件。状态：待做。
+9. **分享预览**。Open Graph 和 Twitter 标签，1200x630 预览图。状态：完成（PR #1）。
+10. **404 页面和 robots.txt**。状态：完成（PR #1）。
+11. **回滚预案**。见上面「回滚」一节。状态：完成（PR #1）。
 12. **三个大音频补一年缓存头**。见下面「剩余」。状态：等稳定网络。
 
 ### 剩余

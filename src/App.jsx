@@ -493,6 +493,17 @@ function App() {
               {copy.enterCafe}
             </button>
             {visits.length > 0 && <StampCard visits={visits} copy={copy} />}
+            <p className="site-note">
+              <span>{copy.siteNote}</span>
+              <a href="/privacy.html">{copy.privacyLink}</a>
+              <a
+                href="https://github.com/yuqingxing22/virtual-cafe-focus-room/issues"
+                target="_blank"
+                rel="noreferrer"
+              >
+                {copy.feedbackLink}
+              </a>
+            </p>
           </div>
           <div className="presence-strip" aria-label={copy.presenceAria}>
             {copy.presence.map((item) => (

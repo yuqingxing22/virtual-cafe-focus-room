@@ -11,6 +11,7 @@ function SoundSlider({ icon, label, value, onChange }) {
         max="1"
         step="0.01"
         value={value}
+        aria-valuetext={`${Math.round(Number(value) * 100)}%`}
         onChange={(event) => onChange(event.target.value)}
       />
     </label>

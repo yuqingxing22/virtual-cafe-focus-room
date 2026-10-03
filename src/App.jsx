@@ -1,5 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Clock3, CloudRain, Coffee, DoorOpen, Keyboard, Laptop, MessageCircle, Music, Pause, Play, Radio, Square, TimerReset, Volume2, VolumeX } from "lucide-react";
+import {
+  Bean,
+  Car,
+  Check,
+  Clock3,
+  CloudRain,
+  Coffee,
+  DoorOpen,
+  Keyboard,
+  Laptop,
+  MessageCircle,
+  Music,
+  Pause,
+  Play,
+  Radio,
+  Square,
+  TimerReset,
+  Utensils,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { CUE_SOUNDS } from "./audio/tracks.js";
 import { playCue, playDrinkCue, playTimedCue, useAmbientAudio } from "./audio/useAmbientAudio.js";
 import SceneBackdrop from "./components/SceneBackdrop.jsx";
@@ -306,6 +326,30 @@ function App() {
     setScene("complete");
   };
 
+  // Keyboard: Space pauses or resumes; Esc pauses first, then ends on a second press.
+  useEffect(() => {
+    if (scene !== "focus") return undefined;
+    const onKeyDown = (event) => {
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName))
+      ) {
+        return;
+      }
+      if (event.code === "Space") {
+        event.preventDefault();
+        if (isRunning) pauseFocus();
+        else resumeFocus();
+      } else if (event.key === "Escape") {
+        if (isRunning) pauseFocus();
+        else endSession();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [scene, isRunning, pauseFocus, resumeFocus, endSession]);
+
   const resetCafe = () => {
     endAtRef.current = null;
     clearSavedSession();
@@ -605,6 +649,7 @@ function App() {
                   {copy.end}
                 </button>
               </div>
+              <p className="keyboard-hint">{copy.keyboardHint}</p>
             </div>
 
             <aside className="focus-side" aria-label={copy.detailsAria}>
@@ -638,7 +683,7 @@ function App() {
                   onChange={(value) => updateLayer("rain", value)}
                 />
                 <SoundSlider
-                  icon={<DoorOpen aria-hidden="true" />}
+                  icon={<Car aria-hidden="true" />}
                   label={copy.soundLabels.traffic}
                   value={layerMix.traffic}
                   onChange={(value) => updateLayer("traffic", value)}
@@ -647,6 +692,7 @@ function App() {
                   <button
                     className={trafficMode === "light" ? "active" : ""}
                     type="button"
+                    aria-pressed={trafficMode === "light"}
                     onClick={() => setTrafficMode("light")}
                   >
                     {copy.trafficModes.light}
@@ -654,6 +700,7 @@ function App() {
                   <button
                     className={trafficMode === "heavy" ? "active" : ""}
                     type="button"
+                    aria-pressed={trafficMode === "heavy"}
                     onClick={() => setTrafficMode("heavy")}
                   >
                     {copy.trafficModes.heavy}
@@ -666,13 +713,13 @@ function App() {
                   onChange={(value) => updateLayer("keys", value)}
                 />
                 <SoundSlider
-                  icon={<Coffee aria-hidden="true" />}
+                  icon={<Utensils aria-hidden="true" />}
                   label={copy.soundLabels.cups}
                   value={layerMix.cups}
                   onChange={(value) => updateLayer("cups", value)}
                 />
                 <SoundSlider
-                  icon={<Coffee aria-hidden="true" />}
+                  icon={<Bean aria-hidden="true" />}
                   label={copy.soundLabels.backCounter}
                   value={layerMix.backCounter}
                   onChange={(value) => updateLayer("backCounter", value)}
@@ -835,9 +882,17 @@ function App() {
               {ambient.enabled ? <Volume2 aria-hidden="true" /> : <VolumeX aria-hidden="true" />}
             </button>
           )}
-          <div className="progress-dots" aria-label={`${copy.currentScene}: ${scene}`}>
+          <div
+            className="progress-dots"
+            role="img"
+            aria-label={`${copy.currentScene}: ${copy.sceneNames[scene] ?? scene}`}
+          >
             {["entrance", "order", "seat", "setup", "focus"].map((item) => (
-              <span className={item === scene ? "active" : ""} key={item} />
+              <span
+                className={item === scene ? "active" : ""}
+                key={item}
+                title={copy.sceneNames[item]}
+              />
             ))}
           </div>
         </div>

@@ -984,9 +984,38 @@ h2 {
   color: var(--paper);
 }
 
+.keyboard-hint {
+  display: none;
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .keyboard-hint {
+    display: block;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .stamp.new {
     animation: none;
+  }
+
+  .scene-backdrop-image,
+  .scene-backdrop-image.active {
+    transform: none;
+    transition: opacity 600ms ease;
+  }
+
+  .primary-action:hover,
+  .secondary-action:hover,
+  .choice-card:hover,
+  .icon-action:hover,
+  .sound-toggle:hover,
+  .ritual-item:hover,
+  .duration:hover {
+    transform: none;
   }
 }
 

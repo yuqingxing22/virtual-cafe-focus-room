@@ -115,6 +115,8 @@ export const COPY = {
     startAmbience: "Start ambience",
     muteAmbience: "Mute the café",
     unmuteAmbience: "Unmute the café",
+    mixerShow: "Adjust the room sound",
+    mixerHide: "Hide the room sound",
     soundLabels: {
       cafe: "Café ambience",
       rain: "Rain",
@@ -218,6 +220,8 @@ export const COPY = {
     startAmbience: "开启环境音",
     muteAmbience: "静音",
     unmuteAmbience: "打开声音",
+    mixerShow: "调整环境音",
+    mixerHide: "收起环境音",
     soundLabels: {
       cafe: "咖啡厅氛围",
       rain: "雨声",

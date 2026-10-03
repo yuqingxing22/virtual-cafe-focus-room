@@ -60,6 +60,43 @@ export const PAUSE_INTERVENTIONS = {
   },
 };
 
+// Offered once per session after 25 focused minutes. Same tone as the pause nudge: permission, not failure.
+export const BREAK_INTERVENTIONS = {
+  window: {
+    speaker: { en: "Reader by the window", zh: "窗边顾客" },
+    line: { en: "The reader by the window turns a page and looks outside.", zh: "窗边的人翻过一页书，往窗外看了一会儿。" },
+    thought: {
+      en: (task, minutes) =>
+        `I have stayed with “${task}” for ${minutes} minutes. I can look outside for a moment, then decide the next step.`,
+      zh: (task, minutes) => `我已经和“${task}”待了 ${minutes} 分钟。可以看一会儿窗外，然后再决定下一步。`,
+    },
+  },
+  corner: {
+    speaker: { en: "Person at the next table", zh: "旁桌顾客" },
+    line: { en: "The person at the next table gets up for a refill.", zh: "旁桌的人起身去续杯了。" },
+    thought: {
+      en: (task, minutes) => `${minutes} minutes in. I can stretch for a bit and come back to “${task}.”`,
+      zh: (task, minutes) => `已经 ${minutes} 分钟了。起来活动一下，再回到“${task}”。`,
+    },
+  },
+  bar: {
+    speaker: { en: "Barista", zh: "咖啡师" },
+    line: { en: "Want a top-up of hot water?", zh: "要不要再加一点热水？" },
+    thought: {
+      en: (task, minutes) => `I have focused for ${minutes} minutes. A short break is reasonable now.`,
+      zh: (task, minutes) => `我已经专注了 ${minutes} 分钟。现在休息一下是合理的。`,
+    },
+  },
+  quiet: {
+    speaker: { en: "Me", zh: "我" },
+    line: { en: "I have been sitting here a while.", zh: "已经坐了很久了。" },
+    thought: {
+      en: (task, minutes) => `${minutes} minutes of focus. A sip of water, eyes off the screen for a bit, then back to “${task}.”`,
+      zh: (task, minutes) => `专注了 ${minutes} 分钟。喝口水，眼睛离开屏幕一会儿，再回到“${task}”。`,
+    },
+  },
+};
+
 export const COPY = {
   en: {
     appName: "Virtual Café Focus Room",
@@ -107,6 +144,14 @@ export const COPY = {
     end: "End",
     innerThought: "Inner thought",
     keyboardHint: "Space pauses or resumes. Esc pauses, then ends.",
+    breakOfferAria: "Break suggestion",
+    breakTake: "Take a 5-minute break",
+    breakSkip: "Keep going",
+    breakEyebrow: "On a break",
+    breakTitle: "Away from the table for a bit.",
+    breakHint: (task) => `“${task}” will still be here in a few minutes.`,
+    breakReturn: "Back to my table",
+    breakOverLine: "Break over. Back to one small step.",
     returnToTask: "Return to task",
     detailsAria: "Session details and ambience",
     drink: "Drink",
@@ -212,6 +257,14 @@ export const COPY = {
     end: "结束",
     innerThought: "我心想",
     keyboardHint: "空格暂停或继续。Esc 先暂停，再按一次结束。",
+    breakOfferAria: "休息提示",
+    breakTake: "休息 5 分钟",
+    breakSkip: "继续",
+    breakEyebrow: "休息中",
+    breakTitle: "离开桌子一会儿。",
+    breakHint: (task) => `“${task}”几分钟后还在这里。`,
+    breakReturn: "回到座位",
+    breakOverLine: "休息结束。先回到一个很小的步骤。",
     returnToTask: "回到任务",
     detailsAria: "本次专注和环境音",
     drink: "饮品",

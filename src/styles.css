@@ -702,6 +702,21 @@ h2 {
   min-height: 40px;
 }
 
+.timer-display.break {
+  color: #cfe3c4;
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.card-actions .secondary-action,
+.card-actions .ghost-action {
+  min-height: 40px;
+}
+
 .thought-line {
   display: grid;
   gap: 6px;

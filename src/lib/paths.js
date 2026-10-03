@@ -8,4 +8,4 @@ export const audioPath = (path) => {
   const audioBase = import.meta.env.VITE_AUDIO_BASE_URL?.trim();
   return audioBase ? joinUrlPath(audioBase, path) : assetPath(path);
 };
-export const DEFAULT_BACKDROP = assetPath("assets/cafe-room.png");
+export const DEFAULT_BACKDROP = assetPath("assets/cafe-room.webp");

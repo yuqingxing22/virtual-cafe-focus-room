@@ -50,7 +50,7 @@ One-time setup and troubleshooting: `docs/cloudflare-pages-r2.md`.
 
 ## Scene images
 
-Still images can be used before video assets are ready. Add `01.png`, `02.png`, and `03.png` to these folders:
+Still images can be used before video assets are ready. Add `01.webp`, `02.webp`, and `03.webp` to these folders:
 
 - `public/assets/scenes/entrance/`
 - `public/assets/scenes/order/`

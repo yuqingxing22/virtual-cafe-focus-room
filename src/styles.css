@@ -53,7 +53,7 @@ button:disabled {
   position: relative;
   min-height: 100vh;
   overflow: hidden;
-  background-image: url("/assets/cafe-room.png");
+  background-image: url("/assets/cafe-room.webp");
   background-position: center;
   background-size: cover;
 }

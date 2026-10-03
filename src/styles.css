@@ -1202,3 +1202,44 @@ h2 {
     font-size: 3.55rem;
   }
 }
+
+.site-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 22px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.site-note a {
+  color: #efcf94;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.site-note a:hover {
+  color: var(--paper);
+}
+
+.error-fallback {
+  display: grid;
+  min-height: 100vh;
+  width: min(560px, calc(100% - 40px));
+  margin: 0 auto;
+  align-content: center;
+  justify-items: start;
+  gap: 18px;
+}
+
+.error-fallback h1 {
+  max-width: none;
+  font-size: 2.4rem;
+}
+
+.error-fallback p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}

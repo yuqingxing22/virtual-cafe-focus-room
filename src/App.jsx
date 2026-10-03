@@ -28,7 +28,7 @@ import SoundSlider from "./components/SoundSlider.jsx";
 import StampCard from "./components/StampCard.jsx";
 import YouTubeStation from "./components/YouTubeStation.jsx";
 import { COUNTER_LAYERS, DRINKS, DURATIONS, SEATS } from "./data/catalog.js";
-import { COPY, PAUSE_INTERVENTIONS, STATUS_MESSAGES } from "./data/copy.js";
+import { BREAK_INTERVENTIONS, COPY, PAUSE_INTERVENTIONS, STATUS_MESSAGES } from "./data/copy.js";
 import { SCENE_MEDIA, getSceneMediaKey } from "./data/media.js";
 import { formatTime } from "./lib/format.js";
 import { DEFAULT_MUSIC_LEVEL, JAZZ_MODES, applyMusicSource, readMusicSource } from "./lib/music.js";
@@ -36,6 +36,11 @@ import { clearSavedSession, readSavedSession, writeSavedSession } from "./lib/se
 import { readStored, writeStored } from "./lib/storage.js";
 import { STAMP_MINUTES, readVisits, writeVisits } from "./lib/visits.js";
 import { RETIRED_YOUTUBE_IDS, YOUTUBE_STATIONS, parseYouTubeId } from "./lib/youtube.js";
+
+// Break offer: after this much focused time, when at least this much is left, for this long.
+const BREAK_AFTER_SECONDS = 25 * 60;
+const BREAK_MIN_LEFT_SECONDS = 5 * 60;
+const BREAK_LENGTH_SECONDS = 5 * 60;
 
 function App() {
   const [lang, setLang] = useState(() => {
@@ -96,6 +101,12 @@ function App() {
   const [pauseNudgeSeen, setPauseNudgeSeen] = useState(false);
   // On narrow screens the mixer is a drawer under the timer; wide screens always show it.
   const [mixerOpen, setMixerOpen] = useState(false);
+  // Break: offered once per session; breakEndAt is the wall-clock end while on a break.
+  const [breakOffered, setBreakOffered] = useState(false);
+  const [breakEndAt, setBreakEndAt] = useState(null);
+  const [breakRemaining, setBreakRemaining] = useState(0);
+  const [breakNotice, setBreakNotice] = useState(false);
+  const onBreak = breakEndAt !== null;
 
   const copy = COPY[lang];
   const selectedDrink = DRINKS.find((item) => item.id === drink);
@@ -104,6 +115,7 @@ function App() {
   const selectedSeatName = selectedSeat?.name[lang];
   const selectedSeatLabel = selectedSeat?.label[lang];
   const pauseIntervention = selectedSeat ? PAUSE_INTERVENTIONS[selectedSeat.id] : null;
+  const breakIntervention = selectedSeat ? BREAK_INTERVENTIONS[selectedSeat.id] : null;
   const sceneMediaKey = getSceneMediaKey(scene, selectedSeat?.id);
   const sceneMedia = SCENE_MEDIA[sceneMediaKey] ?? SCENE_MEDIA.entrance;
   const effectiveDuration = useMemo(() => {
@@ -231,6 +243,7 @@ function App() {
     if (scene !== "focus" || !isRunning) return undefined;
     const statusTimer = window.setInterval(() => {
       setRestoredNotice(false);
+      setBreakNotice(false);
       setMessageIndex((index) => (index + 1) % STATUS_MESSAGES.length);
     }, 26000);
 
@@ -238,7 +251,14 @@ function App() {
   }, [scene, isRunning]);
 
   useEffect(() => {
-    if (scene !== "focus" || isRunning || remaining <= 0 || pauseNudgeSeen || intervention) {
+    if (
+      scene !== "focus" ||
+      isRunning ||
+      onBreak ||
+      remaining <= 0 ||
+      pauseNudgeSeen ||
+      intervention
+    ) {
       return undefined;
     }
 
@@ -248,7 +268,17 @@ function App() {
     }, 90000);
 
     return () => window.clearTimeout(pauseTimer);
-  }, [intervention, isRunning, pauseNudgeSeen, remaining, scene]);
+  }, [intervention, isRunning, onBreak, pauseNudgeSeen, remaining, scene]);
+
+  // Offer a break once, after 25 focused minutes, unless the session is nearly over.
+  useEffect(() => {
+    if (scene !== "focus" || !isRunning || onBreak || breakOffered || intervention) return;
+    const elapsed = effectiveDuration * 60 - remaining;
+    if (elapsed >= BREAK_AFTER_SECONDS && remaining >= BREAK_MIN_LEFT_SECONDS) {
+      setBreakOffered(true);
+      setIntervention("breakReady");
+    }
+  }, [scene, isRunning, onBreak, breakOffered, intervention, effectiveDuration, remaining]);
 
   const startFocus = () => {
     const seconds = effectiveDuration * 60;
@@ -260,6 +290,9 @@ function App() {
     setSessionResult(null);
     setIntervention(null);
     setPauseNudgeSeen(false);
+    setBreakOffered(false);
+    setBreakEndAt(null);
+    setBreakNotice(false);
     setScene("focus");
   };
 
@@ -307,6 +340,7 @@ function App() {
   const completeSession = () => {
     endAtRef.current = null;
     clearSavedSession();
+    setBreakEndAt(null);
     setRemaining(0);
     setIsRunning(false);
     ambient.stopAudio();
@@ -321,6 +355,7 @@ function App() {
     const left = currentRemaining();
     endAtRef.current = null;
     clearSavedSession();
+    setBreakEndAt(null);
     setIsRunning(false);
     ambient.stopAudio();
     recordVisit(left === 0, effectiveDuration * 60 - left);
@@ -329,7 +364,42 @@ function App() {
     setScene("complete");
   };
 
+  const startBreak = () => {
+    setIntervention(null);
+    pauseFocus();
+    setBreakRemaining(BREAK_LENGTH_SECONDS);
+    setBreakEndAt(Date.now() + BREAK_LENGTH_SECONDS * 1000);
+  };
+
+  const finishBreak = () => {
+    if (breakEndAt === null) return;
+    setBreakEndAt(null);
+    setBreakNotice(true);
+    playCue(CUE_SOUNDS.cupSetDown, 0.3);
+    resumeFocus();
+  };
+
+  // Break countdown on the wall clock; returns to the table by itself when it runs out.
+  useEffect(() => {
+    if (breakEndAt === null) return undefined;
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((breakEndAt - Date.now()) / 1000));
+      setBreakRemaining(left);
+      if (left <= 0) finishBreak();
+    };
+    tick();
+    const timer = window.setInterval(tick, 500);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", tick);
+    };
+    // finishBreak only matters when the break ends, which re-runs this effect anyway.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [breakEndAt]);
+
   // Keyboard: Space pauses or resumes; Esc pauses first, then ends on a second press.
+  // During a break either key returns to the table.
   useEffect(() => {
     if (scene !== "focus") return undefined;
     const onKeyDown = (event) => {
@@ -342,16 +412,18 @@ function App() {
       }
       if (event.code === "Space") {
         event.preventDefault();
-        if (isRunning) pauseFocus();
+        if (onBreak) finishBreak();
+        else if (isRunning) pauseFocus();
         else resumeFocus();
       } else if (event.key === "Escape") {
-        if (isRunning) pauseFocus();
+        if (onBreak) finishBreak();
+        else if (isRunning) pauseFocus();
         else endSession();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [scene, isRunning, pauseFocus, resumeFocus, endSession]);
+  }, [scene, isRunning, onBreak, pauseFocus, resumeFocus, endSession, finishBreak]);
 
   const resetCafe = () => {
     endAtRef.current = null;
@@ -372,6 +444,9 @@ function App() {
     setSessionResult(null);
     setIntervention(null);
     setPauseNudgeSeen(false);
+    setBreakOffered(false);
+    setBreakEndAt(null);
+    setBreakNotice(false);
     setTrafficMode("light");
   };
 
@@ -606,14 +681,50 @@ function App() {
         <section className="scene focus-scene" aria-labelledby="focus-title">
           <div className="focus-shell">
             <div className="focus-main">
-              <p className="eyebrow">{selectedSeatName}</p>
-              <h2 id="focus-title">{task}</h2>
-              <div className="timer-display" aria-label={copy.remainingAria(formatTime(remaining))}>
-                {formatTime(remaining)}
+              <p className="eyebrow">{onBreak ? copy.breakEyebrow : selectedSeatName}</p>
+              <h2 id="focus-title">{onBreak ? copy.breakTitle : task}</h2>
+              <div
+                className={`timer-display${onBreak ? " break" : ""}`}
+                aria-label={copy.remainingAria(formatTime(onBreak ? breakRemaining : remaining))}
+              >
+                {formatTime(onBreak ? breakRemaining : remaining)}
               </div>
               <p className="status-message">
-                {restoredNotice ? copy.restoredLine : STATUS_MESSAGES[messageIndex][lang]}
+                {onBreak
+                  ? copy.breakHint(task)
+                  : restoredNotice
+                    ? copy.restoredLine
+                    : breakNotice
+                      ? copy.breakOverLine
+                      : STATUS_MESSAGES[messageIndex][lang]}
               </p>
+              {intervention === "breakReady" && breakIntervention && !onBreak && (
+                <div className="intervention-card" role="status" aria-label={copy.breakOfferAria}>
+                  <p className="speaker">{breakIntervention.speaker[lang]}</p>
+                  <p className="quote">{breakIntervention.line[lang]}</p>
+                  <div className="thought-line">
+                    <span>{copy.innerThought}</span>
+                    <p>
+                      {breakIntervention.thought[lang](
+                        task,
+                        Math.floor((effectiveDuration * 60 - remaining) / 60),
+                      )}
+                    </p>
+                  </div>
+                  <div className="card-actions">
+                    <button className="secondary-action" type="button" onClick={startBreak}>
+                      {copy.breakTake}
+                    </button>
+                    <button
+                      className="ghost-action"
+                      type="button"
+                      onClick={() => setIntervention(null)}
+                    >
+                      {copy.breakSkip}
+                    </button>
+                  </div>
+                </div>
+              )}
               {intervention === "pauseLong" && pauseIntervention && (
                 <div className="intervention-card" role="status">
                   <p className="speaker">{pauseIntervention.speaker[lang]}</p>
@@ -632,7 +743,12 @@ function App() {
                 </div>
               )}
               <div className="focus-actions">
-                {isRunning ? (
+                {onBreak ? (
+                  <button className="icon-action" type="button" onClick={finishBreak}>
+                    <Play aria-hidden="true" />
+                    {copy.breakReturn}
+                  </button>
+                ) : isRunning ? (
                   <button className="icon-action" type="button" onClick={pauseFocus}>
                     <Pause aria-hidden="true" />
                     {copy.pause}

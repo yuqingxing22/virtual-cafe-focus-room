@@ -3,6 +3,7 @@ import {
   Bean,
   Car,
   Check,
+  ChevronDown,
   Clock3,
   CloudRain,
   Coffee,
@@ -93,6 +94,8 @@ function App() {
   const [lastVisit, setLastVisit] = useState(null);
   const [intervention, setIntervention] = useState(null);
   const [pauseNudgeSeen, setPauseNudgeSeen] = useState(false);
+  // On narrow screens the mixer is a drawer under the timer; wide screens always show it.
+  const [mixerOpen, setMixerOpen] = useState(false);
 
   const copy = COPY[lang];
   const selectedDrink = DRINKS.find((item) => item.id === drink);
@@ -652,7 +655,10 @@ function App() {
               <p className="keyboard-hint">{copy.keyboardHint}</p>
             </div>
 
-            <aside className="focus-side" aria-label={copy.detailsAria}>
+            <aside
+              className={`focus-side ${mixerOpen ? "" : "collapsed"}`}
+              aria-label={copy.detailsAria}
+            >
               <div className="detail-row">
                 <span>{copy.drink}</span>
                 <strong>{selectedDrinkName}</strong>
@@ -661,6 +667,17 @@ function App() {
                 <span>{copy.roomTone}</span>
                 <strong>{selectedSeatLabel}</strong>
               </div>
+              <button
+                className="mixer-toggle"
+                type="button"
+                aria-expanded={mixerOpen}
+                aria-controls="mixer-body"
+                onClick={() => setMixerOpen((open) => !open)}
+              >
+                <span>{mixerOpen ? copy.mixerHide : copy.mixerShow}</span>
+                <ChevronDown aria-hidden="true" />
+              </button>
+              <div className="mixer-body" id="mixer-body">
               <button
                 className={`sound-toggle ${ambient.enabled ? "enabled" : ""}`}
                 type="button"
@@ -808,6 +825,7 @@ function App() {
                     )}
                   </div>
                 )}
+              </div>
               </div>
             </aside>
           </div>

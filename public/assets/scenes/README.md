@@ -5,9 +5,9 @@ Put still images in these folders to simulate scene motion before full videos ar
 Use this naming pattern:
 
 ```text
-01.png
-02.png
-03.png
+01.webp
+02.webp
+03.webp
 ```
 
 The app automatically rotates through the images every few seconds. If an image is missing, it falls back to `public/assets/cafe-room.png`.

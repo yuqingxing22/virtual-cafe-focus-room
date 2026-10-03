@@ -100,6 +100,9 @@ export const BREAK_INTERVENTIONS = {
 export const COPY = {
   en: {
     appName: "Virtual Café Focus Room",
+    siteNote: "What you do here is saved only in this browser.",
+    privacyLink: "Privacy",
+    feedbackLink: "Feedback",
     languageLabel: "Language",
     currentScene: "Current scene",
     sceneNames: {
@@ -213,6 +216,9 @@ export const COPY = {
   },
   zh: {
     appName: "云咖啡馆专注室",
+    siteNote: "你在这里的记录只保存在这个浏览器里。",
+    privacyLink: "隐私说明",
+    feedbackLink: "反馈",
     languageLabel: "语言",
     currentScene: "当前步骤",
     sceneNames: {

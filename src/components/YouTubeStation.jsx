@@ -20,6 +20,8 @@ function YouTubeStation({ videoId, volume, playing, onUnavailable }) {
         width: "100%",
         height: "100%",
         videoId: loadedIdRef.current,
+        // Privacy-enhanced embed: YouTube sets no cookies until the visitor plays the video.
+        host: "https://www.youtube-nocookie.com",
         playerVars: { playsinline: 1, rel: 0 },
         events: {
           onReady: () => {

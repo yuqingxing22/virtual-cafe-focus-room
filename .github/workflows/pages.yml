@@ -32,6 +32,8 @@ jobs:
         env:
           # Repository variable; audio is served from Cloudflare R2, not from this site.
           VITE_AUDIO_BASE_URL: ${{ vars.VITE_AUDIO_BASE_URL }}
+          # Optional repository variable; when empty, no analytics script is loaded.
+          VITE_CF_ANALYTICS_TOKEN: ${{ vars.VITE_CF_ANALYTICS_TOKEN }}
         run: npm run build:external-audio
 
       - name: Deploy

@@ -104,6 +104,8 @@ export const COPY = {
     roomTone: "Room tone",
     ambienceOn: "Ambience on",
     startAmbience: "Start ambience",
+    muteAmbience: "Mute the café",
+    unmuteAmbience: "Unmute the café",
     soundLabels: {
       cafe: "Café ambience",
       rain: "Rain",
@@ -196,6 +198,8 @@ export const COPY = {
     roomTone: "座位氛围",
     ambienceOn: "环境音已开启",
     startAmbience: "开启环境音",
+    muteAmbience: "静音",
+    unmuteAmbience: "打开声音",
     soundLabels: {
       cafe: "咖啡厅氛围",
       rain: "雨声",

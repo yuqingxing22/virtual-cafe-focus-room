@@ -6,7 +6,7 @@ import SceneBackdrop from "./components/SceneBackdrop.jsx";
 import SoundSlider from "./components/SoundSlider.jsx";
 import StampCard from "./components/StampCard.jsx";
 import YouTubeStation from "./components/YouTubeStation.jsx";
-import { DRINKS, DURATIONS, SEATS } from "./data/catalog.js";
+import { COUNTER_LAYERS, DRINKS, DURATIONS, SEATS } from "./data/catalog.js";
 import { COPY, PAUSE_INTERVENTIONS, STATUS_MESSAGES } from "./data/copy.js";
 import { SCENE_MEDIA, getSceneMediaKey } from "./data/media.js";
 import { formatTime } from "./lib/format.js";
@@ -47,7 +47,11 @@ function App() {
   const [sessionResult, setSessionResult] = useState(null);
   const [musicSource, setMusicSource] = useState(readMusicSource);
   const [layerMix, setLayerMix] = useState(
-    () => restored?.layerMix ?? applyMusicSource(SEATS[1].layers, readMusicSource()),
+    () => restored?.layerMix ?? applyMusicSource(COUNTER_LAYERS, readMusicSource()),
+  );
+  // "off" means the visitor muted the café; then entering the door stays silent next time.
+  const [ambiencePref, setAmbiencePref] = useState(() =>
+    readStored("cafe-focus-ambience", "on", (value) => value === "on" || value === "off"),
   );
   // The seat effect below must not overwrite a restored mix on the first render.
   const skipSeatMixRef = useRef(Boolean(restored?.layerMix));
@@ -98,6 +102,20 @@ function App() {
   useEffect(() => {
     writeStored("cafe-focus-music-source", musicSource);
   }, [musicSource]);
+
+  useEffect(() => {
+    writeStored("cafe-focus-ambience", ambiencePref);
+  }, [ambiencePref]);
+
+  const toggleAmbience = () => {
+    if (ambient.enabled) {
+      ambient.stopAudio();
+      setAmbiencePref("off");
+    } else {
+      ambient.ensureAudio();
+      setAmbiencePref("on");
+    }
+  };
 
   useEffect(() => {
     writeStored("cafe-focus-youtube-id", youtubeId);
@@ -294,6 +312,7 @@ function App() {
     ambient.stopAudio();
     setLastVisit(null);
     setRestoredNotice(false);
+    setLayerMix(applyMusicSource(COUNTER_LAYERS, musicSource));
     setScene("entrance");
     setDrink(null);
     setSeat(null);
@@ -340,6 +359,8 @@ function App() {
               className="primary-action"
               type="button"
               onClick={() => {
+                // Inside the click so autoplay rules allow it; the room is audible from the door.
+                if (ambiencePref === "on") ambient.ensureAudio();
                 playTimedCue(CUE_SOUNDS.steps, 0.18, 3600);
                 window.setTimeout(() => playCue(CUE_SOUNDS.woodenDoor, 0.36), 450);
                 window.setTimeout(() => playCue(CUE_SOUNDS.door, 0.44), 800);
@@ -598,7 +619,7 @@ function App() {
               <button
                 className={`sound-toggle ${ambient.enabled ? "enabled" : ""}`}
                 type="button"
-                onClick={ambient.enabled ? ambient.stopAudio : ambient.ensureAudio}
+                onClick={toggleAmbience}
               >
                 {ambient.enabled ? <Volume2 aria-hidden="true" /> : <VolumeX aria-hidden="true" />}
                 {ambient.enabled ? copy.ambienceOn : copy.startAmbience}
@@ -802,6 +823,18 @@ function App() {
               中文
             </button>
           </div>
+          {scene !== "entrance" && (
+            <button
+              className={`ambience-switch ${ambient.enabled ? "on" : ""}`}
+              type="button"
+              aria-pressed={ambient.enabled}
+              aria-label={ambient.enabled ? copy.muteAmbience : copy.unmuteAmbience}
+              title={ambient.enabled ? copy.muteAmbience : copy.unmuteAmbience}
+              onClick={toggleAmbience}
+            >
+              {ambient.enabled ? <Volume2 aria-hidden="true" /> : <VolumeX aria-hidden="true" />}
+            </button>
+          )}
           <div className="progress-dots" aria-label={`${copy.currentScene}: ${scene}`}>
             {["entrance", "order", "seat", "setup", "focus"].map((item) => (
               <span className={item === scene ? "active" : ""} key={item} />

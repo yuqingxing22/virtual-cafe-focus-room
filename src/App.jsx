@@ -11,6 +11,7 @@ import { COPY, PAUSE_INTERVENTIONS, STATUS_MESSAGES } from "./data/copy.js";
 import { SCENE_MEDIA, getSceneMediaKey } from "./data/media.js";
 import { formatTime } from "./lib/format.js";
 import { DEFAULT_MUSIC_LEVEL, JAZZ_MODES, applyMusicSource, readMusicSource } from "./lib/music.js";
+import { clearSavedSession, readSavedSession, writeSavedSession } from "./lib/session.js";
 import { readStored, writeStored } from "./lib/storage.js";
 import { STAMP_MINUTES, readVisits, writeVisits } from "./lib/visits.js";
 import { RETIRED_YOUTUBE_IDS, YOUTUBE_STATIONS, parseYouTubeId } from "./lib/youtube.js";
@@ -22,24 +23,35 @@ function App() {
     if (saved === "en" || saved === "zh") return saved;
     return window.navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
   });
-  const [scene, setScene] = useState("entrance");
-  const [drink, setDrink] = useState(null);
-  const [seat, setSeat] = useState(null);
-  const [task, setTask] = useState("");
-  const [duration, setDuration] = useState(45);
-  const [customDuration, setCustomDuration] = useState("");
-  const [ritual, setRitual] = useState({ phone: false, laptop: false });
-  const [remaining, setRemaining] = useState(45 * 60);
-  const [isRunning, setIsRunning] = useState(false);
+  // A focus session saved before a refresh or closed tab; null on a normal visit.
+  const [restored] = useState(readSavedSession);
+  const [scene, setScene] = useState(restored ? "focus" : "entrance");
+  const [drink, setDrink] = useState(restored?.drink ?? null);
+  const [seat, setSeat] = useState(restored?.seat ?? null);
+  const [task, setTask] = useState(restored?.task ?? "");
+  const [duration, setDuration] = useState(
+    restored && DURATIONS.includes(restored.minutes) ? restored.minutes : 45,
+  );
+  const [customDuration, setCustomDuration] = useState(
+    restored && !DURATIONS.includes(restored.minutes) ? String(restored.minutes) : "",
+  );
+  const [ritual, setRitual] = useState(
+    restored ? { phone: true, laptop: true } : { phone: false, laptop: false },
+  );
+  const [remaining, setRemaining] = useState(restored ? restored.remaining : 45 * 60);
+  const [isRunning, setIsRunning] = useState(Boolean(restored?.endAt));
   // Wall-clock end time of the running countdown; null while paused or idle.
-  const endAtRef = useRef(null);
+  const endAtRef = useRef(restored?.endAt ?? null);
+  const [restoredNotice, setRestoredNotice] = useState(Boolean(restored));
   const [messageIndex, setMessageIndex] = useState(0);
   const [sessionResult, setSessionResult] = useState(null);
   const [musicSource, setMusicSource] = useState(readMusicSource);
-  const [layerMix, setLayerMix] = useState(() =>
-    applyMusicSource(SEATS[1].layers, readMusicSource()),
+  const [layerMix, setLayerMix] = useState(
+    () => restored?.layerMix ?? applyMusicSource(SEATS[1].layers, readMusicSource()),
   );
-  const [trafficMode, setTrafficMode] = useState("light");
+  // The seat effect below must not overwrite a restored mix on the first render.
+  const skipSeatMixRef = useRef(Boolean(restored?.layerMix));
+  const [trafficMode, setTrafficMode] = useState(restored?.trafficMode ?? "light");
   const [jazzMode, setJazzMode] = useState(() =>
     readStored("cafe-focus-jazz-mode", "cafe", (value) => JAZZ_MODES.includes(value)),
   );
@@ -119,6 +131,10 @@ function App() {
 
   useEffect(() => {
     if (!selectedSeat) return;
+    if (skipSeatMixRef.current) {
+      skipSeatMixRef.current = false;
+      return;
+    }
     // The seat preset puts music in the slot the user last preferred (jazz or YouTube).
     setLayerMix(applyMusicSource(selectedSeat.layers, musicSource));
     // Changing the preferred source later should not reset the whole mix.
@@ -139,6 +155,8 @@ function App() {
       if (next <= 0) completeSession();
     };
 
+    // Run once right away so a restored session that already ended completes immediately.
+    tick();
     const timer = window.setInterval(tick, 500);
     document.addEventListener("visibilitychange", tick);
     return () => {
@@ -149,9 +167,29 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene, isRunning]);
 
+  // Keep the in-progress session on disk. While running, endAt is enough; while paused, remaining is.
+  useEffect(() => {
+    if (scene !== "focus") return;
+    // Running with no end time only happens for one render while the session completes.
+    if (isRunning && endAtRef.current === null) return;
+    writeSavedSession({
+      task,
+      seat,
+      drink,
+      minutes: effectiveDuration,
+      endAt: isRunning ? endAtRef.current : null,
+      remaining: isRunning ? null : remaining,
+      layerMix,
+      trafficMode,
+    });
+    // `remaining` is read only when pausing, and pausing already changes isRunning.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scene, isRunning, task, seat, drink, effectiveDuration, layerMix, trafficMode]);
+
   useEffect(() => {
     if (scene !== "focus" || !isRunning) return undefined;
     const statusTimer = window.setInterval(() => {
+      setRestoredNotice(false);
       setMessageIndex((index) => (index + 1) % STATUS_MESSAGES.length);
     }, 26000);
 
@@ -227,6 +265,7 @@ function App() {
 
   const completeSession = () => {
     endAtRef.current = null;
+    clearSavedSession();
     setRemaining(0);
     setIsRunning(false);
     ambient.stopAudio();
@@ -240,6 +279,7 @@ function App() {
   const endSession = () => {
     const left = currentRemaining();
     endAtRef.current = null;
+    clearSavedSession();
     setIsRunning(false);
     ambient.stopAudio();
     recordVisit(left === 0, effectiveDuration * 60 - left);
@@ -250,8 +290,10 @@ function App() {
 
   const resetCafe = () => {
     endAtRef.current = null;
+    clearSavedSession();
     ambient.stopAudio();
     setLastVisit(null);
+    setRestoredNotice(false);
     setScene("entrance");
     setDrink(null);
     setSeat(null);
@@ -501,7 +543,9 @@ function App() {
               <div className="timer-display" aria-label={copy.remainingAria(formatTime(remaining))}>
                 {formatTime(remaining)}
               </div>
-              <p className="status-message">{STATUS_MESSAGES[messageIndex][lang]}</p>
+              <p className="status-message">
+                {restoredNotice ? copy.restoredLine : STATUS_MESSAGES[messageIndex][lang]}
+              </p>
               {intervention === "pauseLong" && pauseIntervention && (
                 <div className="intervention-card" role="status">
                   <p className="speaker">{pauseIntervention.speaker[lang]}</p>

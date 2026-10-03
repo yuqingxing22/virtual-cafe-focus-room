@@ -107,4 +107,15 @@ export const SEATS = [
   },
 ];
 
+// Room tone before a seat is chosen: standing at the counter, just inside the door.
+export const COUNTER_LAYERS = {
+  cafe: 0.5,
+  rain: 0.2,
+  keys: 0.1,
+  cups: 0.3,
+  traffic: 0.12,
+  backCounter: 0.32,
+  jazz: 0.14,
+};
+
 export const DURATIONS = [25, 45, 60, 90];

@@ -6,7 +6,7 @@
 
 - **线上**：https://cafe.tempomyplanner.com/ ，GitHub Pages 托管，自定义域名在 `public/CNAME`。推 `main` 触发 `.github/workflows/pages.yml`，构建后强推到 `gh-pages` 分支，再由 GitHub 的 `pages build and deployment` 发布。两个加起来约一分半。
 - **音频**：Cloudflare R2 bucket `virtual-cafe-focus-room-audio`，自定义域名 https://audio.tempomyplanner.com/ ，24 个文件全部在线，对象 key 以 `audio/` 开头。GitHub 仓库变量 `VITE_AUDIO_BASE_URL` 指向这个域名，构建时写进代码。本地开发不设这个变量，回落到 `public/audio/`。
-- **代码**：几乎全部在 `src/App.jsx`（约 1600 行）和 `src/styles.css`。React 19、Vite 8、lucide-react 图标。没有测试和 lint。
+- **代码结构**（2026-10-03 拆分后）：`src/App.jsx` 只剩状态和五个场景的 JSX（约 770 行）；`src/data/` 放饮品、座位、场景图、文案；`src/lib/` 放路径、localStorage、集点卡、音乐槽位、YouTube 工具和格式化；`src/audio/` 放音轨表和 `useAmbientAudio`；`src/components/` 放背景图、集点卡、YouTube 播放器、滑块。样式仍在 `src/styles.css`。React 19、Vite 8、lucide-react 图标。没有测试；lint 用 scratchpad 里临时装的 ESLint 8 跑 `no-undef` 检查。
 - **浏览器验证方式**：`npm run build` 后 `npx vite preview --port 4173 --strictPort`，用 Playwright 或 Chrome 打开 http://localhost:4173/ 。之前的 session 用 `page.evaluate` 里按按钮文字点击的方式走完整流程，用覆盖 `Date.now` 的办法快进倒计时。
 
 ## 工作约定
@@ -23,6 +23,16 @@
 - YouTube 预设电台必须在嵌入播放器里实际播一下才算可用。oembed 返回 200 不代表能嵌入，error 150 表示作者禁止外站播放。直播 ID 会随频道重开直播而变。
 
 ## 改动日志
+
+### 2026-10-03
+
+- `776d09b` Add a web app manifest and ship scene images as WebP。`public/manifest.webmanifest` 加主题色和 Apple 的 meta，图标从 favicon 生成在 `public/icons/`，手机可以「添加到主屏幕」。场景图和兜底背景转成 1600 宽的 WebP（59 MB 变 3.4 MB），代码只引用 `.webp`；PNG 母版留在 `public/` 里方便改图，`vite.config.js` 里的小插件在构建后把它们从 dist 删掉，每次部署从约 76 MB 降到约 10 MB。重新生成用 `python3 scripts/convert-images.py`。
+- `8521953` Offer a short break after 25 focused minutes。每次会话只提一次：专注满 25 分钟且剩余不少于 5 分钟时，出现座位相关的提示卡（`BREAK_INTERVENTIONS`），可选「休息 5 分钟」或「继续」。休息时主倒计时暂停，显示 5 分钟的休息倒数，到点自动回到任务并放一声杯子落桌的提示音，空格或 Esc 也能提前回来。休息时间不计入专注分钟。
+- `eb86669` Collapse the mixer into a drawer on narrow screens。980px 以下侧栏只露饮品、座位氛围和「调整环境音」按钮，环境音开关和全部滑块收进抽屉；桌面端不变。390px 宽的专注页从约 1800px 高缩到约 900px。
+- `9344d28` Polish: entrance title, mixer icons, shortcuts, a11y, reduced motion。入口页大标题改成「你的座位在等你。」不再和品牌名重复；街声、杯子、后厨滑块换成车、餐具、咖啡豆图标；空格暂停或继续，Esc 先暂停再按一次结束，鼠标设备上显示提示；进度点读出场景名（`copy.sceneNames`），街声按钮加 `aria-pressed`，滑块加百分比 `aria-valuetext`；`prefers-reduced-motion` 下关闭背景漂移和悬停上浮。
+- `8f7ffae` Start the café ambience at the door。点「推门进入」时在点击事件里启动环境音，先用吧台预设 `COUNTER_LAYERS`，选座位后切成座位的混音；页头多了一个静音按钮（入口页不显示），专注页的开关共用同一个处理函数；静音偏好存 `cafe-focus-ambience`，静音过的人下次推门保持安静。
+- `69361a0` Keep an in-progress focus session across refreshes。进行中的会话存 `cafe-focus-session`（任务、座位、饮品、时长、结束时间戳或暂停时的剩余秒数、混音、街声模式），加载时恢复到专注页并显示「座位一直给你留着」；结束时间已过的会话立即完成并盖章；12 小时以上的存档忽略。新文件 `src/lib/session.js`。
+- `26a7add` Split App.jsx into data, lib, audio and component modules。纯重构，行为不变。App.jsx 从 1822 行减到 774 行，其余按「当前状态」里的目录拆开。用切行号的脚本完成，再用构建、ESLint `no-undef` 和浏览器全流程验证。
 
 ### 2026-10-02
 
@@ -55,12 +65,18 @@
 6. 无障碍：进度点 aria-label 读出来是原始场景 id；街声强度按钮缺 `aria-pressed`；滑块缺 `aria-valuetext`；`prefers-reduced-motion` 下关掉背景 12 秒缓慢缩放（集点卡动画已处理）。
 7. manifest，让手机能「添加到主屏幕」。
 8. 场景图转 WebP。每张约 2 MB，dist 共 76 MB，转成 1280 宽 WebP 每张 150 KB 左右。
-9. 拆分 `App.jsx`：数据（饮品、座位、文案）、音频 hook、各场景组件、集点卡、YouTube 播放器分文件。
 
-### 需要用户决定
+用户在 2026-10-03 说「全部都做，顺序你来定」，执行顺序：拆分 → 刷新不丢会话 → 推门时环境音 → 小细节加无障碍 → 手机抽屉 → 休息允许 → manifest → WebP → 停止跟踪 public/audio。
 
-- `public/audio/` 是否停止 git 跟踪。音频已在 R2，停止跟踪后 clone 快很多，本地文件不会删。
-- 三个网页上传的大音频（rain、cafe-ambience、typing）缓存头只有 4 小时，网络稳定时用命令行覆盖一次补成一年。
+### 剩余
+
+- 三个网页上传的大音频（rain、cafe-ambience、typing）缓存头只有 4 小时，网络稳定时用命令行覆盖一次补成一年。在这台机器的网络上命令行传大文件会断，所以一直没做。
+- `public/audio/` 已不在 git 里。新 clone 的机器要本地开发带声音，需要从 R2 下载一份放回 `public/audio/`（key 和路径一致），或者从 `sound-effect/` 原始录音复制。
+
+### 之后可以考虑（不在原清单里）
+
+- 场景图的 PNG 母版（55 MB）还在仓库里，只是不再部署。如果想让仓库也瘦下来，可以把它们移到 `cafe-artifacts/` 并停止跟踪，需要用户同意。
+- `public/assets/characters/` 两张角色设定图（4.7 MB）没有被代码引用，但仍会部署。
 
 ### 已完成（对应 to-do.md）
 
@@ -71,3 +87,13 @@
 - 爵士滑块图标换成音符
 - 集点卡
 - YouTube 电台（用户后来提的需求，不在原评审里）
+- 拆分 `App.jsx`（2026-10-03）
+- 刷新页面不丢会话（2026-10-03）
+- 推门进入时环境音响起（2026-10-03）
+- 小细节：标题重复、滑块图标、快捷键（2026-10-03）
+- 无障碍和减少动态效果（2026-10-03）
+- 手机端混音器抽屉（2026-10-03）
+- 休息允许（2026-10-03）
+- manifest，可添加到主屏幕（2026-10-03）
+- 场景图转 WebP，构建时剔除 PNG 母版（2026-10-03）
+- `public/audio/` 停止 git 跟踪（2026-10-03，用户在「全部都做」里批准）

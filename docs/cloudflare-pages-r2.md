@@ -55,17 +55,16 @@
 - **本地开发**不受影响：没有设置 `VITE_AUDIO_BASE_URL` 时，应用回落到本地 `public/audio/`。
 - **构建保护**：`scripts/prune-external-audio.mjs` 在变量缺失时会直接报错，所以如果哪天仓库变量被误删，部署会失败而不是悄悄把 250 MB 音频又推上 GitHub Pages。
 
-## 可选：把音频移出 git
+## 音频已移出 git（2026-10-03）
 
-音频现在仍然在 git 里跟踪。搬到 R2 之后可以停止跟踪，仓库 clone 会快很多（历史里的旧文件不会自动消失，需要重写历史才能瘦身，不急可以不做）：
+`public/audio/` 在 `.gitignore` 里，不再被 git 跟踪，线上一律从 R2 读取。原来那台机器上的本地文件还在，开发不受影响。历史提交里的旧音频没有清掉，想让仓库体积真正变小需要重写历史，不急可以不做。
 
-```bash
-echo "public/audio/" >> .gitignore
-git rm -r --cached public/audio
-git commit -m "Stop tracking audio; served from R2"
-```
+新机器 clone 之后，本地开发想有声音，二选一：
 
-本地文件不会被删除，开发仍然能用。新机器 clone 后要本地开发音频，需要从 R2 或 `sound-effect/` 原始录音重新放一份到 `public/audio/`。
+- 从 R2 下载一份放回 `public/audio/`，保持和线上一样的路径，例如 `public/audio/rain.mp3`、`public/audio/jazz/cafe/01-jazz-cafe.mp3`。全部文件名见 `src/audio/tracks.js`。
+- 从 `sound-effect/` 原始录音复制并按同样的文件名命名。
+
+没有本地音频时应用照常运行，只是没有环境音。
 
 ## 排错
 

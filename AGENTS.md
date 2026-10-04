@@ -31,7 +31,7 @@
 
 ## 设计改动要知道的
 
-- 样式在 `src/styles.css`，颜色变量在文件开头的 `:root`。文案在 `src/data/copy.js`，中英文都要写。
+- 样式在 `src/styles/`，按用途分文件：`base.css`（颜色变量在开头的 `:root`，还有字体）、`layout.css`（背景、页头）、`controls.css`（按钮、面板、选项卡片）、每个场景一个文件（`entrance`、`order`、`seat`、`setup`、`focus`、`complete`）、`mixer.css`、`stamp-card.css`。`src/styles.css` 只是按顺序 `@import` 它们，顺序就是层叠顺序：后面的文件在优先级相同时覆盖前面的，新文件要加进这个列表。响应式规则（980px、640px）写在各自文件末尾的 `@media` 里。文案在 `src/data/copy.js`，中英文都要写。
 - 每个场景的页面结构在 `src/scenes/`（入口、点单、选座、设定、专注、完成各一个文件），页头、混音器等在 `src/components/`。状态和计时逻辑在 `src/hooks/`，改外观一般不需要动它。
 - 场景背景图在 `public/assets/scenes/<场景>/01-03.webp`，由 PNG 母版用 `python3 scripts/convert-images.py` 生成。换图时放 PNG 再跑脚本，视觉规范见 `docs/visual-asset-guidelines.md`。
 - 产品语气是「轻、不责备、把人带回任务」，见 `docs/interaction-roadmap.md`。

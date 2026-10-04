@@ -32,6 +32,7 @@
 ## 设计改动要知道的
 
 - 样式在 `src/styles.css`，颜色变量在文件开头的 `:root`。文案在 `src/data/copy.js`，中英文都要写。
+- 每个场景的页面结构在 `src/scenes/`（入口、点单、选座、设定、专注、完成各一个文件），页头、混音器等在 `src/components/`。状态和计时逻辑在 `src/hooks/`，改外观一般不需要动它。
 - 场景背景图在 `public/assets/scenes/<场景>/01-03.webp`，由 PNG 母版用 `python3 scripts/convert-images.py` 生成。换图时放 PNG 再跑脚本，视觉规范见 `docs/visual-asset-guidelines.md`。
 - 产品语气是「轻、不责备、把人带回任务」，见 `docs/interaction-roadmap.md`。
 - 动画：界面动效用 Motion（`src/motion/`），画面里会动的东西用 PixiJS 画布（`src/canvas/`）。怎么选、怎么用见 `docs/animation.md`。

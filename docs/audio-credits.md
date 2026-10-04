@@ -75,7 +75,7 @@
 
 这 5 个文件是用下载工具从标准许可的 YouTube 视频里抓的，没有再使用的授权，已从 R2 删除，代码不再引用：`cafe-ambience.mp3`、`rain.mp3`、`typing.mp3`、`light-traffic.m4a`、`heavy-traffic.m4a`。来源视频分别属于 Leontube、輕音樂 放鬆 Soothing Relaxation、HANBINI STUDYLOG、Midnight ASMR、Walking Around Taiwan。
 
-这些文件在 2026-10-03 之前的 git 历史里仍然存在（2026-10-03 起 `public/audio/` 已不进 git）。要彻底清除需要重写仓库历史，见 `docs/progress.md`。
+这些文件曾留在 2026-10-03 之前的 git 历史里（2026-10-03 起 `public/audio/` 已不进 git）。2026-10-04 重写了仓库历史，把 `public/audio/` 从所有提交里去掉，`main` 的历史和新的 clone 里都不再有它们。GitHub 上旧提交暂时还能通过提交号直链和旧 PR 的引用访问，彻底清除要等 GitHub Support 处理，见 `docs/progress.md`。
 
 ## 图片
 

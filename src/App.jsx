@@ -35,7 +35,13 @@ import { COUNTER_LAYERS, DRINKS, DURATIONS, SEATS } from "./data/catalog.js";
 import { BREAK_INTERVENTIONS, COPY, PAUSE_INTERVENTIONS, STATUS_MESSAGES } from "./data/copy.js";
 import { SCENE_MEDIA, getSceneMediaKey } from "./data/media.js";
 import { formatTime } from "./lib/format.js";
-import { DEFAULT_MUSIC_LEVEL, JAZZ_MODES, applyMusicSource, readMusicSource } from "./lib/music.js";
+import {
+  DEFAULT_MUSIC_LEVEL,
+  JAZZ_ENABLED,
+  JAZZ_MODES,
+  applyMusicSource,
+  readMusicSource,
+} from "./lib/music.js";
 import { clearSavedSession, readSavedSession, writeSavedSession } from "./lib/session.js";
 import { readStored, writeStored } from "./lib/storage.js";
 import { TIME_SLOTS, applyTimeSlot, readTimeSlot } from "./lib/timeSlot.js";
@@ -141,7 +147,13 @@ function App() {
     () => ({ time: timeSlot, jazz: jazzMode }),
     [timeSlot, jazzMode],
   );
-  const ambient = useAmbientAudio(layerMix, ambientModes);
+  // While jazz is switched off, any jazz level left in a preset, a saved session or a stored
+  // preference must stay silent, so the layer is zeroed on its way to the audio engine.
+  const audioLayers = useMemo(
+    () => (JAZZ_ENABLED ? layerMix : { ...layerMix, jazz: 0 }),
+    [layerMix],
+  );
+  const ambient = useAmbientAudio(audioLayers, ambientModes);
 
   useEffect(() => {
     writeStored("cafe-focus-jazz-mode", jazzMode);
@@ -908,25 +920,37 @@ function App() {
                   value={layerMix.backCounter}
                   onChange={(value) => updateLayer("backCounter", value)}
                 />
-                <SoundSlider
-                  icon={<Music aria-hidden="true" />}
-                  label={copy.soundLabels.jazz}
-                  value={layerMix.jazz ?? 0}
-                  onChange={(value) => updateLayer("jazz", value)}
-                />
-                <div className="mode-buttons jazz-modes" aria-label={copy.jazzModeLabel}>
-                  {JAZZ_MODES.map((mode) => (
-                    <button
-                      className={jazzMode === mode ? "active" : ""}
-                      key={mode}
-                      type="button"
-                      aria-pressed={jazzMode === mode}
-                      onClick={() => chooseJazzMode(mode)}
-                    >
-                      {copy.jazzModes[mode]}
-                    </button>
-                  ))}
-                </div>
+                {JAZZ_ENABLED ? (
+                  <>
+                    <SoundSlider
+                      icon={<Music aria-hidden="true" />}
+                      label={copy.soundLabels.jazz}
+                      value={layerMix.jazz ?? 0}
+                      onChange={(value) => updateLayer("jazz", value)}
+                    />
+                    <div className="mode-buttons jazz-modes" aria-label={copy.jazzModeLabel}>
+                      {JAZZ_MODES.map((mode) => (
+                        <button
+                          className={jazzMode === mode ? "active" : ""}
+                          key={mode}
+                          type="button"
+                          aria-pressed={jazzMode === mode}
+                          onClick={() => chooseJazzMode(mode)}
+                        >
+                          {copy.jazzModes[mode]}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="layer-paused" role="note">
+                    <span>
+                      <Music aria-hidden="true" />
+                      {copy.soundLabels.jazz}
+                    </span>
+                    <p>{copy.jazzPaused}</p>
+                  </div>
+                )}
                 <SoundSlider
                   icon={<Radio aria-hidden="true" />}
                   label={copy.youtubeLabel}

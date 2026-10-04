@@ -1,5 +1,10 @@
 import { readStored } from "./storage.js";
 
+// Temporary switch (2026-10-04): the jazz playlists are being reworked, so the jazz layer is
+// silenced and its controls are replaced by a notice. The playlists, audio files and stored
+// preferences are all kept; set this back to true to restore the feature as it was.
+export const JAZZ_ENABLED = false;
+
 export const JAZZ_MODES = ["cafe", "swing", "club"];
 
 // Jazz and the YouTube station share one music slot: raising one silences the other.

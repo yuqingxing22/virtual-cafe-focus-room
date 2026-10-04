@@ -20,4 +20,6 @@ const dropPngMasters = () => ({
 export default defineConfig({
   base: "/",
   plugins: [react(), dropPngMasters()],
+  // The repository is public anyway; source maps make error reports and devtools readable.
+  build: { sourcemap: true },
 });

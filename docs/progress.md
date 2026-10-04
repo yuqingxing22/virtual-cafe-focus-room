@@ -54,6 +54,7 @@
 
 ### 2026-10-04
 
+- PR #2 日志更新。用户完成了三项控制台操作：Cloudflare Web Analytics 的 token（第一次误填了占位文字，重设后重新部署，线上上报返回 204）；UptimeRobot 两个监控；`audio.tempomyplanner.com` 的缓存规则（m4a 街声从 DYNAMIC 变 HIT）。上线运维还剩：音频来源表（等用户给来源）、三个大音频的一年缓存头（等稳定网络）、是否接远程错误上报（等用户决定）。
 - PR #1 Launch prep。YouTube 嵌入改用 `youtube-nocookie.com`；入口页加一行「记录只存在这个浏览器里」和隐私说明、反馈链接，新增 `public/privacy.html`；`ErrorBoundary` 在渲染出错时显示重新加载页；可选的 Cloudflare Web Analytics，只有构建时设了 `VITE_CF_ANALYTICS_TOKEN` 才加载；Open Graph 和 Twitter 标签加 `og-image.jpg`；`404.html` 和 `robots.txt`；`ci.yml` 给每个 PR 跑构建；`AGENTS.md` 和新版 `CLAUDE.md` 规定分支加 PR 的流程；`docs/audio-credits.md` 等用户填。
 - 合并 PR #1 之后给 `main` 打开分支保护：必须走 PR、必须通过 `build` 检查、对管理员同样生效、不要求审批人数。命令：`gh api -X PUT repos/yuqingxing22/virtual-cafe-focus-room/branches/main/protection --input scripts/branch-protection.json`。
 
@@ -98,11 +99,11 @@
 
 上线后立刻需要：
 
-4. **访问统计**。Cloudflare Web Analytics，免费、不用 cookie。代码读 `VITE_CF_ANALYTICS_TOKEN`，token 要用户在 Cloudflare 控制台生成。状态：代码完成（PR #1），等用户在 Cloudflare 生成 token 并设为仓库变量 `VITE_CF_ANALYTICS_TOKEN`。
+4. **访问统计**。Cloudflare Web Analytics，免费、不用 cookie。代码读 `VITE_CF_ANALYTICS_TOKEN`，token 要用户在 Cloudflare 控制台生成。状态：完成（2026-10-04）。用户在 Cloudflare 建了站点并设了仓库变量 `VITE_CF_ANALYTICS_TOKEN`；线上已验证上报请求返回 204。数据在 Cloudflare 控制台的 Web Analytics 里看。改了变量之后要 `gh workflow run pages.yml` 重新部署才生效。
 5. **错误兜底和监控**。先加 React 错误边界，页面崩了显示「重新加载」而不是白屏；远程错误上报（Sentry 之类）等用户决定要不要。状态：错误边界完成（PR #1），远程上报等用户。
 6. **反馈入口**。入口页链接到 GitHub Issues，不公开用户的个人邮箱。状态：完成（PR #1）。
-7. **在线监控**。UptimeRobot 免费档监控 `cafe.tempomyplanner.com` 和 `audio.tempomyplanner.com`。状态：等用户。
-8. **R2 用量**。两条 `.m4a` 街声没有走 Cloudflare 缓存（`cf-cache-status: DYNAMIC`），mp3 是走的。需要在 Cloudflare 加一条缓存规则并设用量通知。状态：等用户（控制台）。
+7. **在线监控**。UptimeRobot 免费档监控 `https://cafe.tempomyplanner.com/` 和 `https://audio.tempomyplanner.com/audio/door-bell.mp3`，挂了发邮件给用户。状态：用户说已设好（2026-10-04），Claude 看不到那个账号，无法独立确认。
+8. **R2 用量**。两条 `.m4a` 街声没有走 Cloudflare 缓存（`cf-cache-status: DYNAMIC`），mp3 是走的。状态：缓存规则完成（2026-10-04，用户加了 `Cache audio` 规则，主机名等于 `audio.tempomyplanner.com` 时可缓存；已验证两条 m4a 返回 HIT）。用量通知是可选项，还没设。
 
 收尾：
 

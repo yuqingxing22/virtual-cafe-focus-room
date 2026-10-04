@@ -19,6 +19,8 @@
 - 替换已有音频文件要改文件名，因为 R2 上设了一年不可变缓存。
 - 合并后验证线上时注意：GitHub Pages 的 `index.html` 有 10 分钟缓存，同一个浏览器刚访问过的话会拿到旧页面和旧脚本。加一个查询参数（如 `/?fresh=1`）绕过，并确认页面加载的脚本文件名和 `curl` 到的一致。
 - 几个 worktree 共用一个 `.git`。两个 session 同时 `git fetch` 或 `git pull` 会撞锁，报 `cannot lock ref`，重试一次就好。写脚本时别把 `git pull` 放在一长串 `&&` 的开头又不检查结果：它失败后面全跳过，容易误以为做完了。
+- **Cloudflare 运维 token**（2026-10-04 用户建的，名字 `cafe-ops`）存在用户这台 Mac 的 `~/.config/cloudflare/cafe-ops-token`，不在仓库里，也不要复制进任何项目文件夹或贴进聊天。用法：读出文件内容，作为 `Authorization: Bearer` 调 Cloudflare API。它只对 `tempomyplanner.com` 这个域名和用户的账号有这些权限：清缓存、编辑缓存规则、读域名配置、读 DNS（不能改）、读域名流量统计、读网站访问统计（Web Analytics）、编辑通知。R2 和 Workers 不走这个 token，用 wrangler 的登录。域名和账号的 ID 用 token 调 `GET /zones?name=tempomyplanner.com` 就能查到，不写在公开仓库里。
+- 从 R2 删除或替换文件后要清缓存，否则旧地址还能访问：`POST /zones/<zone id>/purge_cache`，`files` 里每个地址放两份，一份纯 URL，一份带 `headers: {Origin: https://cafe.tempomyplanner.com}`，因为 Cloudflare 的缓存键包含 Origin 头。
 - 往 R2 传音频用 `python3 scripts/r2-upload-large.py 文件名...`：它把文件切成 6 MiB 的块逐块重试上传，再用一个临时 Worker 在 Cloudflare 内部拼起来，最后下载回来对 MD5。原因是这台机器的网络上传到约 15 MB 时 TLS 连接会被破坏（wrangler 报 fetch failed，curl 报 bad record mac），限速也没用。新的大文件用 Cloudflare 控制台网页上传。只改已有对象的元数据不需要重传：部署一个带 R2 绑定的临时 Worker，`get` 再 `put` 同一个 key 并带上新的 `httpMetadata`，用返回的 etag 对比本地 md5，做完删掉 Worker。
 - 音乐只有一个槽位：爵士和 YouTube 电台互斥，`updateLayer` 里处理。新增别的音乐源也要遵守这条。
 - 改动日志写 PR 号，日志和代码放在同一个 PR 里。2026-10-03 及之前的条目是直接推 main 时期留下的 commit 号。
@@ -56,6 +58,7 @@
 
 ### 2026-10-04
 
+- PR #14 日志更新。用户建了 Cloudflare 运维 token（见工作约定）。Claude 用它清掉了 5 个已删除旧音频的边缘缓存，这 5 个地址现在返回 404，无授权的音频从线上彻底撤下；验证了 token 的七项权限；加了一条 1 美元的预算提醒。还留着的只有 git 历史里的旧文件。
 - PR #13 进度文件更新。「多个 session 并行」一节改成表格，写明三个 session 各自的工作目录；工作约定里加了 GitHub Pages 缓存和 git 撞锁两条。背景：当天 f1 和运维 session 共用主文件夹，f1 切分支时带走过运维 session 未提交的暂停爵士改动，事后核对 PR #11 合并的内容逐行无误；规则本身由 f1 在 PR #12 里写进了 `CLAUDE.md` 和 `AGENTS.md`。运维 session 从这个 PR 起也改用自己的 worktree。
 - PR #12 Motion and PixiJS foundations。装了 `motion`、`pixi.js`、`@pixi/react`。`src/motion/` 有统一的时长、缓动和几组动作（`fade`、`rise`、`sceneChange`、`stagger`、`pressable`）和 `MotionRoot`（`reducedMotion="user"`）；`src/canvas/` 的 `CanvasStage` 是透明、默认点击穿透的画布层，Pixi 单独打包、渲染时才加载，减少动态效果时停在第一帧；`src/lib/reducedMotion.js`。用法写在 `docs/animation.md`。还没有页面引用它们，线上 JS 和 main 完全一样。用一个没提交的演示页在无头 Chromium 里验证过画布逐帧运行、减少动态效果时停住、Motion 退场动画正常。`CLAUDE.md` 和 `AGENTS.md` 加了规则：几个 session 共用同一个文件夹，在里面切分支会把别人的未提交改动带走（这次就发生过，已还原），所以每个 session 在自己的 git worktree 里工作，并用 SendMessage 互相通知分支和要改的文件。
 - PR #11 Pause the jazz feature。按用户要求暂时关闭爵士，显示「正在优化」的提示，详见上面「暂时关闭的功能」。只加了一个开关和一处置零，歌单、音频文件、存储的偏好都没动。浏览器验证：偏好是爵士的访客坐吧台（预设爵士 0.32）时没有任何爵士文件被请求，提示中英文都显示，YouTube 电台照常可用。
@@ -133,7 +136,7 @@
 5. **错误兜底和监控**。先加 React 错误边界，页面崩了显示「重新加载」而不是白屏；远程上报用 Sentry。状态：错误边界完成（PR #1）；Sentry 完成（2026-10-04）：用户注册了 Sentry（组织 `virual-cafe`，项目 `virtual-cafe`），DSN 设为仓库变量 `VITE_SENTRY_DSN`，线上已验证上报返回 200。错误在 https://virual-cafe.sentry.io/issues/ 看，新问题会发邮件给用户。
 6. **反馈入口**。入口页链接到 GitHub Issues，不公开用户的个人邮箱。状态：完成（PR #1）。
 7. **在线监控**。UptimeRobot 免费档监控 `https://cafe.tempomyplanner.com/` 和 `https://audio.tempomyplanner.com/audio/door-bell.mp3`，挂了发邮件给用户。状态：用户说已设好（2026-10-04），Claude 看不到那个账号，无法独立确认。
-8. **R2 用量**。两条 `.m4a` 街声没有走 Cloudflare 缓存（`cf-cache-status: DYNAMIC`），mp3 是走的。状态：缓存规则完成（2026-10-04，用户加了 `Cache audio` 规则，主机名等于 `audio.tempomyplanner.com` 时可缓存；已验证两条 m4a 返回 HIT）。用量通知是可选项，还没设。
+8. **R2 用量**。两条 `.m4a` 街声没有走 Cloudflare 缓存（`cf-cache-status: DYNAMIC`），mp3 是走的。状态：完成（2026-10-04）。用户加了 `Cache audio` 缓存规则（主机名等于 `audio.tempomyplanner.com` 时可缓存，m4a 也走缓存）。账号里原有一条 Cloudflare 自动建的预算提醒（当月费用到 10 美元发邮件），Claude 又加了一条 1 美元的，发到同一个邮箱。
 
 收尾：
 
@@ -152,7 +155,6 @@
 
 ### 剩余
 
-- 5 个旧音频已从 R2 删除（2026-10-04，直接请求 R2 返回 404），但 Cloudflare 边缘缓存里还有副本，原地址仍能访问到。wrangler 的登录没有清缓存的权限，需要用户在 Cloudflare 控制台 Caching → Configuration → Purge Cache → Custom Purge 里按 URL 清除这 5 个地址：`https://audio.tempomyplanner.com/audio/` 加上 `cafe-ambience.mp3`、`rain.mp3`、`typing.mp3`、`light-traffic.m4a`、`heavy-traffic.m4a`。状态：等用户。
 - 公开仓库的 git 历史里（2026-10-03 之前的提交）还留着那 5 个无授权音频和旧的大文件。要彻底清除需要重写历史并强推，会改掉所有提交号，需要用户同意，而且要先临时关掉分支保护。
 - 时间档目前只换声音，画面还是雨夜。用户说画面交给 ChatGPT 之后调整。
 - 没做的一个小想法：按时间档自动换默认歌单（早晨咖啡馆、白天摇摆、夜晚小酒馆）。现在歌单是用户自己的偏好，不随时间档变。

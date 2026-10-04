@@ -6,7 +6,7 @@
 
 - **线上**：https://cafe.tempomyplanner.com/ ，已公开给真实用户。GitHub Pages 托管，自定义域名在 `public/CNAME`。`main` 有分支保护，只能通过 PR 合并；合并到 `main` 触发 `.github/workflows/pages.yml`，构建后强推到 `gh-pages` 分支，再由 GitHub 的 `pages build and deployment` 发布。两个加起来约一分半。
 - **音频**：Cloudflare R2 bucket `virtual-cafe-focus-room-audio`，自定义域名 https://audio.tempomyplanner.com/ ，28 个文件，对象 key 以 `audio/` 开头，全部有允许公开使用的许可（见 `docs/audio-credits.md`）。环境音分早晨、白天、夜晚三档，由用户手动选，不按时钟自动切换；规则在 `src/lib/timeSlot.js` 和 `src/audio/tracks.js`。GitHub 仓库变量 `VITE_AUDIO_BASE_URL` 指向这个域名，构建时写进代码。本地开发不设这个变量，回落到 `public/audio/`。
-- **代码结构**（2026-10-03 拆分后）：`src/App.jsx` 只剩状态和五个场景的 JSX（约 770 行）；`src/data/` 放饮品、座位、场景图、文案；`src/lib/` 放路径、localStorage、集点卡、音乐槽位、YouTube 工具和格式化；`src/audio/` 放音轨表和 `useAmbientAudio`；`src/components/` 放背景图、集点卡、YouTube 播放器、滑块。样式仍在 `src/styles.css`。React 19、Vite 8、lucide-react 图标。动画库 Motion（`src/motion/`）和画布库 PixiJS（`src/canvas/`）已装好，见 `docs/animation.md`。没有测试；lint 用 scratchpad 里临时装的 ESLint 8 跑 `no-undef` 检查。
+- **代码结构**（2026-10-04 拆分后）：`src/App.jsx`（约 190 行）只管当前是哪个场景和访客选了什么；`src/scenes/` 每个场景一个组件（Entrance、Order、Seat、Setup、Focus、Complete）；`src/hooks/` 放状态逻辑：`useFocusSession`（倒计时、暂停、休息、快捷键、存档、集点）、`useSoundscape`（混音、时间档、音乐源、YouTube 电台、静音）、`useLanguage`；`src/components/` 放页头、混音器（`Mixer`）、电台卡片（`StationPicker`）、时间档按钮、插入事件卡片、背景图、集点卡、YouTube 播放器、滑块；`src/data/` 放饮品、座位、场景图、文案；`src/lib/` 放路径、localStorage、集点卡、音乐槽位、YouTube 工具和格式化；`src/audio/` 放音轨表和 `useAmbientAudio`。样式仍在 `src/styles.css`。React 19、Vite 8、lucide-react 图标。动画库 Motion（`src/motion/`）和画布库 PixiJS（`src/canvas/`）已装好，见 `docs/animation.md`。没有单元测试；重构用 `scripts/visual-check/` 的全流程对比验证（见工作约定），lint 用 scratchpad 里临时装的 ESLint 8 跑 `no-undef` 和 `no-unused-vars`。
 - **浏览器验证方式**：`npm run build` 后 `npx vite preview --port 4173 --strictPort`，用 Playwright 或 Chrome 打开 http://localhost:4173/ 。之前的 session 用 `page.evaluate` 里按按钮文字点击的方式走完整流程，用覆盖 `Date.now` 的办法快进倒计时。
 
 ## 工作约定
@@ -25,6 +25,8 @@
 - 音乐只有一个槽位：爵士和 YouTube 电台互斥，`updateLayer` 里处理。新增别的音乐源也要遵守这条。
 - 改动日志写 PR 号，日志和代码放在同一个 PR 里。2026-10-03 及之前的条目是直接推 main 时期留下的 commit 号。
 - YouTube 预设电台必须在嵌入播放器里实际播一下才算可用。oembed 返回 200 不代表能嵌入，error 150 表示作者禁止外站播放。直播 ID 会随频道重开直播而变。
+
+- 不改行为的重构用 `scripts/visual-check/` 验证：`walk.mjs` 用 Playwright 的假时钟在桌面、平板、手机三种宽度和中英文下走完 29 个状态（入口、点单、选座、设定、专注、混音器、YouTube 电台、静音、切语言、暂停提醒、休息、刷新恢复、完成、提前结束），每个状态存截图、DOM 和每个元素的计算样式，外加标题、localStorage 和音频请求的日志；`compare.mjs` 对比两次的结果。用法：把 main 和改动后的版本各构建一份，分别 `vite preview` 在两个端口，`PORT=端口 CHROME_EXE=浏览器路径 node walk.mjs 输出目录` 各跑一遍，再 `node compare.mjs 目录A 目录B`。Playwright、pngjs、pixelmatch 不是项目依赖，在 scratchpad 里临时 `npm i`，从那里运行脚本。同一个版本跑两次，截图也会有很小的渲染噪声（输入框光标），所以先拿 main 跑两次看噪声，再判断差异；DOM 和计算样式应该完全一致。改了界面文案或流程后，脚本里按文字找按钮的地方要跟着改。
 
 ## 回滚
 
@@ -58,6 +60,7 @@
 
 ### 2026-10-04
 
+- PR #15 Split App.jsx。纯重构，行为不变。`App.jsx` 从 1113 行减到约 190 行，拆成 `src/scenes/`（六个场景）、`src/hooks/`（`useFocusSession`、`useSoundscape`、`useLanguage`）和几个新组件（`AppHeader`、`Mixer`、`StationPicker`、`TimeSlotButtons`、`InterventionCard`）；原来写了两遍的时间档按钮合成一个组件。所有 effect 仍然在 App 这一层的 hook 里，场景组件只负责显示。`JAZZ_ENABLED` 开关和 `audioLayers` 置零逻辑原样保留（分别在 `Mixer.jsx` 和 `useSoundscape.js`）。验证：新旧两个构建各走一遍 `scripts/visual-check/walk.mjs`（6 种屏幕和语言组合，共 174 个状态），DOM、每个元素的计算样式、标签页标题、localStorage、音频请求全部一致；截图在容差内只有 4 张不同，都是 YouTube 链接输入框有光标的那一张，main 自己跑两次也是这 4 张。另外不拦截音频实际播放了一遍，各时间档播放的文件和音量一致，静音和结束后都停了。
 - PR #14 日志更新。用户建了 Cloudflare 运维 token（见工作约定）。Claude 用它清掉了 5 个已删除旧音频的边缘缓存，这 5 个地址现在返回 404，无授权的音频从线上彻底撤下；验证了 token 的七项权限；加了一条 1 美元的预算提醒。还留着的只有 git 历史里的旧文件。
 - PR #13 进度文件更新。「多个 session 并行」一节改成表格，写明三个 session 各自的工作目录；工作约定里加了 GitHub Pages 缓存和 git 撞锁两条。背景：当天 f1 和运维 session 共用主文件夹，f1 切分支时带走过运维 session 未提交的暂停爵士改动，事后核对 PR #11 合并的内容逐行无误；规则本身由 f1 在 PR #12 里写进了 `CLAUDE.md` 和 `AGENTS.md`。运维 session 从这个 PR 起也改用自己的 worktree。
 - PR #12 Motion and PixiJS foundations。装了 `motion`、`pixi.js`、`@pixi/react`。`src/motion/` 有统一的时长、缓动和几组动作（`fade`、`rise`、`sceneChange`、`stagger`、`pressable`）和 `MotionRoot`（`reducedMotion="user"`）；`src/canvas/` 的 `CanvasStage` 是透明、默认点击穿透的画布层，Pixi 单独打包、渲染时才加载，减少动态效果时停在第一帧；`src/lib/reducedMotion.js`。用法写在 `docs/animation.md`。还没有页面引用它们，线上 JS 和 main 完全一样。用一个没提交的演示页在无头 Chromium 里验证过画布逐帧运行、减少动态效果时停住、Motion 退场动画正常。`CLAUDE.md` 和 `AGENTS.md` 加了规则：几个 session 共用同一个文件夹，在里面切分支会把别人的未提交改动带走（这次就发生过，已还原），所以每个 session 在自己的 git worktree 里工作，并用 SendMessage 互相通知分支和要改的文件。
@@ -150,7 +153,7 @@
 背景：用户觉得很多交互做不了、不够好看，决定在现有 React 上加动画库和画布库，并整理代码结构；沉浸感的具体设计交给 ChatGPT。
 
 1. **装动画库和画布库，建基础模块**。Motion 做界面动效，PixiJS 做场景画布，用法见 `docs/animation.md`。状态：完成（见改动日志），还没有接到任何页面上。
-2. **拆 `App.jsx`**。目标：`src/scenes/` 每个场景一个组件，`src/hooks/` 放计时和休息（`useFocusSession`）、声音和混音（`useSoundscape`）、语言，`src/components/` 加页头、混音器、时间档按钮（现在重复写了两遍）、插入事件卡片。纯重构，行为不变，用改动前后的全流程截图逐像素对比验证（截图脚本用 Playwright 的假时钟走完入口、点单、选座、设定、专注、暂停提醒、休息、刷新恢复、完成、提前结束，桌面和手机、中英文各一遍）。要保留 session 61 加的 `JAZZ_ENABLED` 分支和 `audioLayers` 置零逻辑。状态：待做，等 61 的「暂停爵士」PR 合并后再开始，避免冲突。
+2. **拆 `App.jsx`**。状态：完成（PR #15，见改动日志）。
 3. **拆 `styles.css`**。按场景和组件分到 `src/styles/`，同一个选择器现在散在好几处（比如 `.session-summary`、`.duration`、`.complete-panel`），合并时用同一套截图对比确认外观不变。这是 ChatGPT 主要改的文件，拆之前先确认它没有进行中的设计分支，拆完同步更新 `AGENTS.md`。状态：待做，排在第 2 项之后。
 
 ### 剩余

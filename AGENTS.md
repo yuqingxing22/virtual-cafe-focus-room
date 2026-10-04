@@ -2,7 +2,7 @@
 
 这个网站已经公开上线（https://cafe.tempomyplanner.com/），有真实用户。合并到 `main` 的任何东西会在一分半钟内自动部署。请把 `main` 当成生产环境。
 
-多个助手在同一个仓库工作：Claude 负责运维和功能，ChatGPT 负责设计。交接文件是 `docs/progress.md`，开工前先读，做完更新。`CLAUDE.md` 里是同一套规则，改规则时两个文件一起改。
+多个助手在同一个仓库工作：Claude 负责运维和功能，ChatGPT 负责设计。ChatGPT 做界面和交互设计时可以改任何代码、样式、文案和页面结构（用户 2026-10-04 说的），下面的流程和「不要做的事」仍然适用。交接文件是 `docs/progress.md`，开工前先读，做完更新。`CLAUDE.md` 里是同一套规则，改规则时两个文件一起改。
 
 ## 工作流程：分支加 PR，不直接推 main
 
@@ -31,6 +31,7 @@
 
 ## 设计改动要知道的
 
+- 开始做设计前先读 `docs/design-suggestions.md`：Claude 写的沉浸感建议、iPod 播放器在哪里，以及改动时要保住的东西（冒烟测试依赖的文字和类名、第一次出声必须在点击里等）。
 - 样式在 `src/styles/`，按用途分文件：`base.css`（颜色变量在开头的 `:root`，还有字体）、`layout.css`（背景、页头）、`controls.css`（按钮、面板、选项卡片）、每个场景一个文件（`entrance`、`order`、`seat`、`setup`、`focus`、`complete`）、`mixer.css`、`stamp-card.css`。`src/styles.css` 只是按顺序 `@import` 它们，顺序就是层叠顺序：后面的文件在优先级相同时覆盖前面的，新文件要加进这个列表。响应式规则（980px、640px）写在各自文件末尾的 `@media` 里。文案在 `src/data/copy.js`，中英文都要写。
 - 每个场景的页面结构在 `src/scenes/`（入口、点单、选座、设定、专注、完成各一个文件），页头、混音器等在 `src/components/`。状态和计时逻辑在 `src/hooks/`，改外观一般不需要动它。
 - 场景背景图在 `public/assets/scenes/<场景>/01-03.webp`，由 PNG 母版用 `python3 scripts/convert-images.py` 生成。换图时放 PNG 再跑脚本，视觉规范见 `docs/visual-asset-guidelines.md`。

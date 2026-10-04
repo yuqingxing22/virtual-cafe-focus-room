@@ -2,7 +2,7 @@
 
 网站已经公开上线，有真实用户。每个 session 开始前先读 `docs/progress.md`：里面有当前状态、工作约定、改动日志、待办和回滚方法。做完一项就更新它，这是多个 session 之间唯一的交接文件。
 
-`AGENTS.md` 是给所有 AI 助手（包括 ChatGPT）看的同一套规则，改规则时两个文件一起改。分工：Claude 负责运维和功能，ChatGPT 负责设计。
+`AGENTS.md` 是给所有 AI 助手（包括 ChatGPT）看的同一套规则，改规则时两个文件一起改。分工：Claude 负责运维和功能，ChatGPT 负责设计。ChatGPT 做界面和交互设计时可以改任何代码、样式、文案和页面结构（用户 2026-10-04 说的）；Claude 给它的建议和交接写在 `docs/design-suggestions.md`。
 
 ## 开工前
 

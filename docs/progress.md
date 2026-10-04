@@ -62,6 +62,7 @@
 
 ### 2026-10-04
 
+- PR #23 建议文件补充 iPod 的细节。d4 合并原型后发来的事实补进 `docs/design-suggestions.md`：操作方式、封面是可以整套替换的占位设计、手机宽度会溢出、向用户提过但未确认的接入方案（混音器里一个小条，点开浮出完整 iPod）、128 kbps 和 256 kbps 两套音频都不要改。只改文档。
 - PR #22 给设计助手的建议文件。用户要让 ChatGPT 把界面和交互做得更沉浸，说它可以修改所有东西，并要 Claude 把建议写成文件、写清 iPod 播放器在哪里。新增 `docs/design-suggestions.md`：现在的体验实际是什么样、按效果和工作量排的八条建议（场景过渡、专注页让界面退后、画面跟时间档变、声画联动、把控制做成物件等）和一份不建议做的清单、iPod 原型的位置和接入前要解决的事、改动时要保住的东西（冒烟测试依赖的文字和类名、第一次出声必须在点击里、音频和隐私规则）。`AGENTS.md` 和 `CLAUDE.md` 同步加了一句：ChatGPT 做设计时可以改任何代码、样式、文案和页面结构，流程和「不要做的事」仍然适用（后半句是 Claude 的理解，用户原话是「他可以修改所有东西」）。只改文档，线上行为不变。
 - PR #21 iPod 样式的爵士播放器原型（session d4）。用户要的播放器：屏幕上按电台显示封面并做 Cover Flow 滑动，可以转的点按转盘，耳机线，机身颜色可选。代码在 `src/components/IPod/`（`IPod.jsx`、`covers.jsx`、`useStationPlayer.js`、`ipod.css`），曲目表在 `src/data/jazzStations.js`（6 个电台 44 首）。**只是原型，没有接进网站**：没有任何代码引用它，`JAZZ_ENABLED` 仍是 `false`，线上行为不变。预览页 `ipod-preview.html` 只在 `npm run dev` 下能打开（`/ipod-preview.html`），不是构建入口，`dist/` 里没有它。用法、localStorage key 和还没做的事见下面「暂时关闭的功能」。在 dev server 上用浏览器走过：转盘旋转、滑动、选台播放、上下首、音量、暂停、换色并记住、快放完时预加载下一首并自动接上。手机宽度没有测。
 - PR #20 日志更新。用户说不再需要历史重写前的本机备份，Claude 把 `~/Downloads/virtual_cafe_focus_room-backups/`（397 MB，含旧音频和新旧提交号对照表）移进了废纸篓，清空废纸篓由用户自己做。仓库和线上没有任何变化。

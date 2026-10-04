@@ -25,7 +25,7 @@
 - 往 R2 传音频用 `python3 scripts/r2-upload-large.py 文件名...`：它把文件切成 6 MiB 的块逐块重试上传，再用一个临时 Worker 在 Cloudflare 内部拼起来，最后下载回来对 MD5。原因是这台机器的网络上传到约 15 MB 时 TLS 连接会被破坏（wrangler 报 fetch failed，curl 报 bad record mac），限速也没用。新的大文件用 Cloudflare 控制台网页上传。只改已有对象的元数据不需要重传：部署一个带 R2 绑定的临时 Worker，`get` 再 `put` 同一个 key 并带上新的 `httpMetadata`，用返回的 etag 对比本地 md5，做完删掉 Worker。
 - 音乐只有一个槽位：爵士和 YouTube 电台互斥，`updateLayer` 里处理。新增别的音乐源也要遵守这条。
 - 改动日志写 PR 号，日志和代码放在同一个 PR 里。2026-10-03 及之前的条目是直接推 main 时期留下的 commit 号（已换成 2026-10-04 历史重写之后的新号）。
-- **git 历史在 2026-10-04 重写过**，去掉了所有提交里的 `public/audio/`（见改动日志）。`main` 上的提交号全部是新的。重写之前建的本地分支不要 push，否则会把旧历史连同旧音频带回 GitHub；新分支一律从最新的 `origin/main` 拉。旧号和新号的对照表（`commit-map.txt`）和重写前的完整备份在本机 `~/Downloads/virtual_cafe_focus_room-backups/2026-10-03-before-history-rewrite/`，不在仓库里。
+- **git 历史在 2026-10-04 重写过**，去掉了所有提交里的 `public/audio/`（见改动日志）。`main` 上的提交号全部是新的。重写之前建的本地分支不要 push，否则会把旧历史连同旧音频带回 GitHub；新分支一律从最新的 `origin/main` 拉。重写前的本机备份（含新旧提交号对照表）已按用户要求删除。要找某个旧 PR 在新历史里的提交，用 `git log --grep '(#PR号)'`。
 - YouTube 预设电台必须在嵌入播放器里实际播一下才算可用。oembed 返回 200 不代表能嵌入，error 150 表示作者禁止外站播放。直播 ID 会随频道重开直播而变。
 
 - 不改行为的重构用 `scripts/visual-check/` 验证：`walk.mjs` 用 Playwright 的假时钟在桌面、平板、手机三种宽度和中英文下走完 29 个状态（入口、点单、选座、设定、专注、混音器、YouTube 电台、静音、切语言、暂停提醒、休息、刷新恢复、完成、提前结束），每个状态存截图、DOM 和每个元素的计算样式，外加标题、localStorage 和音频请求的日志；`compare.mjs` 对比两次的结果。用法：把 main 和改动后的版本各构建一份，分别 `vite preview` 在两个端口，`PORT=端口 CHROME_EXE=浏览器路径 node walk.mjs 输出目录` 各跑一遍，再 `node compare.mjs 目录A 目录B`。Playwright、pngjs、pixelmatch 不是项目依赖，在 scratchpad 里临时 `npm i`，从那里运行脚本。同一个版本跑两次，截图也会有很小的渲染噪声（输入框光标），所以先拿 main 跑两次看噪声，再判断差异；DOM 和计算样式应该完全一致。改了界面文案或流程后，脚本里按文字找按钮的地方要跟着改。
@@ -62,6 +62,7 @@
 
 ### 2026-10-04
 
+- PR #20 日志更新。用户说不再需要历史重写前的本机备份，Claude 把 `~/Downloads/virtual_cafe_focus_room-backups/`（397 MB，含旧音频和新旧提交号对照表）移进了废纸篓，清空废纸篓由用户自己做。仓库和线上没有任何变化。
 - PR #19 日志更新。历史重写之后，用户决定仓库保持公开，不改 private，也不为残留的旧提交删库重建；理由和以后改 private 的前提记在待办「剩余」里。
 - 重写 git 历史，去掉旧音频（强推，不是 PR；这条日志在 PR #18）。用户明确同意后执行。用 `git filter-repo --invert-paths --path public/audio/` 把 `public/audio/` 从 `main` 的全部 39 个提交里去掉：39 个提交都保留，作者、时间、提交说明不变；逐个提交核对过「旧文件树去掉 `public/audio/` 等于新文件树」，最新文件树和重写前完全相同，所以网站内容没有变。`main` 从 `2e108d0` 变成 `9bf1e99`。历史里全部文件未压缩合计从 384 MB 降到 130 MB（`public/audio/` 占 254 MB，其中包括那 5 个无授权的环境音），新 clone 的 `.git` 是 129 MB，里面没有任何音频路径。过程：先通知 f1 和 d4 并得到确认；在仓库外做了完整备份；在临时副本里改写并验证；临时取消分支保护后用 `--force-with-lease` 强推，随即按 `scripts/branch-protection.json` 恢复并核对与之前一致。保护一共解除了两次：第一次约 1 秒，推送命令因为 zsh 把 `$NEW:refs` 里的 `:r` 当成修饰符而在本地报错，什么都没推出去；改成 `${NEW}:refs/heads/main` 后第二次约 28 秒，推送成功。之后两个部署 workflow 都成功，线上冒烟测试 32 项全部通过。主文件夹的 `main` 指针从旧的 `f97fdc7` 挪到新历史里的同一个提交 `a5264cd`（只动指针，文件没动）。**还没清干净的部分**：GitHub 上旧提交仍然能通过提交号直链访问（比如 `/commit/2e108d0`、`/raw/<旧提交号>/public/audio/rain.mp3`），因为 17 个旧 PR 的引用（`refs/pull/1/head` 到 `refs/pull/17/head`）还指着旧历史，这些引用仓库主人删不了，GitHub 报告的仓库体积也要等他们清理后才会变。要彻底清除得由用户向 GitHub Support 提请求，见待办「剩余」。旧 PR 页面上「合并为某提交」的链接指向的也是旧号。本机共用的 `.git` 里旧对象也还在（备份、reflog、重写前的本地分支），只在本机，不影响公开仓库。
 - PR #17 线上冒烟测试脚本。新增 `scripts/smoke-test/`（`smoke.mjs` 和 README）。起因：PR #15 的大重构上线后，运维 session 需要独立确认线上没坏，而两套 MCP 浏览器当时都被别的 session 占用，于是自己起无头 Chrome 跑了一遍，全部通过，随后把脚本放进仓库；PR #16 的样式拆分上线后又用它跑了一遍，同样全部通过。它和 `scripts/visual-check/` 的分工：前者是部署后的健康检查，后者是重构前后的逐状态对比。
@@ -164,7 +165,7 @@
 
 ### 剩余
 
-- git 历史里的旧音频：`main` 的历史已在 2026-10-04 清干净（见改动日志）。GitHub 那边旧提交还能通过提交号直链和 `refs/pull/1/head` 到 `refs/pull/17/head` 访问，要彻底清掉只能由仓库主人向 GitHub Support 提请求，请他们删除这些 PR 引用指向的旧对象并做垃圾回收（请求里给出仓库名、受影响的 PR 号 1 到 17、最早被改写的提交 `10dd2a483e46faff29e1348f4d1f24387220af2d`）。状态：用户决定仓库保持公开（2026-10-04），这点残留可以接受：要拿到旧文件得特意翻旧 PR 的提交记录或事先知道旧提交号。要不要向 GitHub Support 提请求由用户自己决定，不提也行，其他 session 不用再催；提的话在表单里不要走「删除仓库」那条路（Are you having trouble deleting your repository 选 No，确认项选 Don't Delete）。考虑过把仓库改成 private（旧提交对外就不可见了），没有采用：GitHub 免费版只给公开仓库用 Pages，改了网站会下线，分支保护也会失效；而且入口页和隐私页的反馈入口指向 GitHub Issues，访客会看到 404。以后要改 private，先确认套餐是 Pro（学生可通过 GitHub Education 免费获得），并先把反馈入口换成别的渠道。本机的备份文件夹等用户说不需要了再删。
+- git 历史里的旧音频：`main` 的历史已在 2026-10-04 清干净（见改动日志）。GitHub 那边旧提交还能通过提交号直链和 `refs/pull/1/head` 到 `refs/pull/17/head` 访问，要彻底清掉只能由仓库主人向 GitHub Support 提请求，请他们删除这些 PR 引用指向的旧对象并做垃圾回收（请求里给出仓库名、受影响的 PR 号 1 到 17、最早被改写的提交 `10dd2a483e46faff29e1348f4d1f24387220af2d`）。状态：用户决定仓库保持公开（2026-10-04），这点残留可以接受：要拿到旧文件得特意翻旧 PR 的提交记录或事先知道旧提交号。要不要向 GitHub Support 提请求由用户自己决定，不提也行，其他 session 不用再催；提的话在表单里不要走「删除仓库」那条路（Are you having trouble deleting your repository 选 No，确认项选 Don't Delete）。考虑过把仓库改成 private（旧提交对外就不可见了），没有采用：GitHub 免费版只给公开仓库用 Pages，改了网站会下线，分支保护也会失效；而且入口页和隐私页的反馈入口指向 GitHub Issues，访客会看到 404。以后要改 private，先确认套餐是 Pro（学生可通过 GitHub Education 免费获得），并先把反馈入口换成别的渠道。本机的备份文件夹已按用户要求删除（2026-10-04）。
 - 时间档目前只换声音，画面还是雨夜。用户说画面交给 ChatGPT 之后调整。
 - 没做的一个小想法：按时间档自动换默认歌单（早晨咖啡馆、白天摇摆、夜晚小酒馆）。现在歌单是用户自己的偏好，不随时间档变。
 - 备选素材在本机 `freesound/`（两条鸟叫用户说完整保留作备选：`birds-forest-morning`、`birds-dawn-chorus-europe`）；没用上的在各自的 `archive/`。试听和做决定的页面是 `sound-effect/candidates/index.html`，由同目录的 `catalog.py` 和 `build.py` 生成。

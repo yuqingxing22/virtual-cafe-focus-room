@@ -24,7 +24,8 @@
 - 从 R2 删除或替换文件后要清缓存，否则旧地址还能访问：`POST /zones/<zone id>/purge_cache`，`files` 里每个地址放两份，一份纯 URL，一份带 `headers: {Origin: https://cafe.tempomyplanner.com}`，因为 Cloudflare 的缓存键包含 Origin 头。
 - 往 R2 传音频用 `python3 scripts/r2-upload-large.py 文件名...`：它把文件切成 6 MiB 的块逐块重试上传，再用一个临时 Worker 在 Cloudflare 内部拼起来，最后下载回来对 MD5。原因是这台机器的网络上传到约 15 MB 时 TLS 连接会被破坏（wrangler 报 fetch failed，curl 报 bad record mac），限速也没用。新的大文件用 Cloudflare 控制台网页上传。只改已有对象的元数据不需要重传：部署一个带 R2 绑定的临时 Worker，`get` 再 `put` 同一个 key 并带上新的 `httpMetadata`，用返回的 etag 对比本地 md5，做完删掉 Worker。
 - 音乐只有一个槽位：爵士和 YouTube 电台互斥，`updateLayer` 里处理。新增别的音乐源也要遵守这条。
-- 改动日志写 PR 号，日志和代码放在同一个 PR 里。2026-10-03 及之前的条目是直接推 main 时期留下的 commit 号。
+- 改动日志写 PR 号，日志和代码放在同一个 PR 里。2026-10-03 及之前的条目是直接推 main 时期留下的 commit 号（已换成 2026-10-04 历史重写之后的新号）。
+- **git 历史在 2026-10-04 重写过**，去掉了所有提交里的 `public/audio/`（见改动日志）。`main` 上的提交号全部是新的。重写之前建的本地分支不要 push，否则会把旧历史连同旧音频带回 GitHub；新分支一律从最新的 `origin/main` 拉。旧号和新号的对照表（`commit-map.txt`）和重写前的完整备份在本机 `~/Downloads/virtual_cafe_focus_room-backups/2026-10-03-before-history-rewrite/`，不在仓库里。
 - YouTube 预设电台必须在嵌入播放器里实际播一下才算可用。oembed 返回 200 不代表能嵌入，error 150 表示作者禁止外站播放。直播 ID 会随频道重开直播而变。
 
 - 不改行为的重构用 `scripts/visual-check/` 验证：`walk.mjs` 用 Playwright 的假时钟在桌面、平板、手机三种宽度和中英文下走完 29 个状态（入口、点单、选座、设定、专注、混音器、YouTube 电台、静音、切语言、暂停提醒、休息、刷新恢复、完成、提前结束），每个状态存截图、DOM 和每个元素的计算样式，外加标题、localStorage 和音频请求的日志；`compare.mjs` 对比两次的结果。用法：把 main 和改动后的版本各构建一份，分别 `vite preview` 在两个端口，`PORT=端口 CHROME_EXE=浏览器路径 node walk.mjs 输出目录` 各跑一遍，再 `node compare.mjs 目录A 目录B`。Playwright、pngjs、pixelmatch 不是项目依赖，在 scratchpad 里临时 `npm i`，从那里运行脚本。同一个版本跑两次，截图也会有很小的渲染噪声（输入框光标），所以先拿 main 跑两次看噪声，再判断差异；DOM 和计算样式应该完全一致。改了界面文案或流程后，脚本里按文字找按钮的地方要跟着改。
@@ -40,7 +41,7 @@
    gh run rerun <上一个好版本的 run id>
    ```
 
-   这只是把线上换回旧版本，`main` 上的坏提交还在，下一次合并又会把它带上线，所以之后要做第 2 步。
+   这只是把线上换回旧版本，`main` 上的坏提交还在，下一次合并又会把它带上线，所以之后要做第 2 步。只重跑 2026-10-04 历史重写之后的 run（提交号 `9bf1e99` 及之后）；更早的 run 指向的旧提交已经不在 `main` 上，GitHub 清理后会取不到。
 
 2. **撤销坏提交**。开分支 revert，走正常 PR：
 
@@ -61,6 +62,7 @@
 
 ### 2026-10-04
 
+- 重写 git 历史，去掉旧音频（强推，不是 PR；这条日志在 PR #18）。用户明确同意后执行。用 `git filter-repo --invert-paths --path public/audio/` 把 `public/audio/` 从 `main` 的全部 39 个提交里去掉：39 个提交都保留，作者、时间、提交说明不变；逐个提交核对过「旧文件树去掉 `public/audio/` 等于新文件树」，最新文件树和重写前完全相同，所以网站内容没有变。`main` 从 `2e108d0` 变成 `9bf1e99`。历史里全部文件未压缩合计从 384 MB 降到 130 MB（`public/audio/` 占 254 MB，其中包括那 5 个无授权的环境音），新 clone 的 `.git` 是 129 MB，里面没有任何音频路径。过程：先通知 f1 和 d4 并得到确认；在仓库外做了完整备份；在临时副本里改写并验证；临时取消分支保护后用 `--force-with-lease` 强推，随即按 `scripts/branch-protection.json` 恢复并核对与之前一致。保护一共解除了两次：第一次约 1 秒，推送命令因为 zsh 把 `$NEW:refs` 里的 `:r` 当成修饰符而在本地报错，什么都没推出去；改成 `${NEW}:refs/heads/main` 后第二次约 28 秒，推送成功。之后两个部署 workflow 都成功，线上冒烟测试 32 项全部通过。主文件夹的 `main` 指针从旧的 `f97fdc7` 挪到新历史里的同一个提交 `a5264cd`（只动指针，文件没动）。**还没清干净的部分**：GitHub 上旧提交仍然能通过提交号直链访问（比如 `/commit/2e108d0`、`/raw/<旧提交号>/public/audio/rain.mp3`），因为 17 个旧 PR 的引用（`refs/pull/1/head` 到 `refs/pull/17/head`）还指着旧历史，这些引用仓库主人删不了，GitHub 报告的仓库体积也要等他们清理后才会变。要彻底清除得由用户向 GitHub Support 提请求，见待办「剩余」。旧 PR 页面上「合并为某提交」的链接指向的也是旧号。本机共用的 `.git` 里旧对象也还在（备份、reflog、重写前的本地分支），只在本机，不影响公开仓库。
 - PR #17 线上冒烟测试脚本。新增 `scripts/smoke-test/`（`smoke.mjs` 和 README）。起因：PR #15 的大重构上线后，运维 session 需要独立确认线上没坏，而两套 MCP 浏览器当时都被别的 session 占用，于是自己起无头 Chrome 跑了一遍，全部通过，随后把脚本放进仓库；PR #16 的样式拆分上线后又用它跑了一遍，同样全部通过。它和 `scripts/visual-check/` 的分工：前者是部署后的健康检查，后者是重构前后的逐状态对比。
 - PR #16 Split styles.css。纯重构，外观不变。1296 行的 `src/styles.css` 按用途拆成 `src/styles/` 下 12 个文件，`styles.css` 保留为入口，只有 `@import`（没有删除或改名，`main.jsx` 不用动）。每条规则原样搬到它第一个选择器所属的文件；`@media` 里的规则跟着各自的组件走，在每个文件里各有一份 `@media` 块，所以构建出的 CSS 大了约 0.6 KB。规则是用脚本搬的，没有手改内容。验证分两层：一是静态检查，拆分前后 263 条「选择器加声明」一条不多一条不少，相对顺序颠倒、优先级相同且设置了同一属性的规则对有 557 对，逐对在 174 个页面状态（加上爵士开启和错误页的手写结构）里查过，没有一对能同时命中同一个元素，所以层叠结果不会变，悬停和聚焦状态也包括在内；二是 `scripts/visual-check/` 走一遍，每个元素的计算样式和 DOM 全部一致，截图只有输入框光标那几张有噪声。第一版脚本把 `@media` 里的组合规则整条放进第一个选择器的文件，静态检查查出 6 对真的会变（比如手机宽度下 `.duration-group` 的列数），改成按选择器分开后归零。
 - PR #15 Split App.jsx。纯重构，行为不变。`App.jsx` 从 1113 行减到约 190 行，拆成 `src/scenes/`（六个场景）、`src/hooks/`（`useFocusSession`、`useSoundscape`、`useLanguage`）和几个新组件（`AppHeader`、`Mixer`、`StationPicker`、`TimeSlotButtons`、`InterventionCard`）；原来写了两遍的时间档按钮合成一个组件。所有 effect 仍然在 App 这一层的 hook 里，场景组件只负责显示。`JAZZ_ENABLED` 开关和 `audioLayers` 置零逻辑原样保留（分别在 `Mixer.jsx` 和 `useSoundscape.js`）。验证：新旧两个构建各走一遍 `scripts/visual-check/walk.mjs`（6 种屏幕和语言组合，共 174 个状态），DOM、每个元素的计算样式、标签页标题、localStorage、音频请求全部一致；截图在容差内只有 4 张不同，都是 YouTube 链接输入框有光标的那一张，main 自己跑两次也是这 4 张。另外不拦截音频实际播放了一遍，各时间档播放的文件和音量一致，静音和结束后都停了。
@@ -78,23 +80,23 @@
 
 ### 2026-10-03
 
-- `2f64fa8` Stop tracking public/audio; update handoff docs。`public/audio/` 进 `.gitignore` 并从索引移除，本地文件未动；R2 文档补了新 clone 如何取音频。至此 2026-10-01 评审清单全部完成。
-- `776d09b` Add a web app manifest and ship scene images as WebP。`public/manifest.webmanifest` 加主题色和 Apple 的 meta，图标从 favicon 生成在 `public/icons/`，手机可以「添加到主屏幕」。场景图和兜底背景转成 1600 宽的 WebP（59 MB 变 3.4 MB），代码只引用 `.webp`；PNG 母版留在 `public/` 里方便改图，`vite.config.js` 里的小插件在构建后把它们从 dist 删掉，每次部署从约 76 MB 降到约 10 MB。重新生成用 `python3 scripts/convert-images.py`。
-- `8521953` Offer a short break after 25 focused minutes。每次会话只提一次：专注满 25 分钟且剩余不少于 5 分钟时，出现座位相关的提示卡（`BREAK_INTERVENTIONS`），可选「休息 5 分钟」或「继续」。休息时主倒计时暂停，显示 5 分钟的休息倒数，到点自动回到任务并放一声杯子落桌的提示音，空格或 Esc 也能提前回来。休息时间不计入专注分钟。
-- `eb86669` Collapse the mixer into a drawer on narrow screens。980px 以下侧栏只露饮品、座位氛围和「调整环境音」按钮，环境音开关和全部滑块收进抽屉；桌面端不变。390px 宽的专注页从约 1800px 高缩到约 900px。
-- `9344d28` Polish: entrance title, mixer icons, shortcuts, a11y, reduced motion。入口页大标题改成「你的座位在等你。」不再和品牌名重复；街声、杯子、后厨滑块换成车、餐具、咖啡豆图标；空格暂停或继续，Esc 先暂停再按一次结束，鼠标设备上显示提示；进度点读出场景名（`copy.sceneNames`），街声按钮加 `aria-pressed`，滑块加百分比 `aria-valuetext`；`prefers-reduced-motion` 下关闭背景漂移和悬停上浮。
-- `8f7ffae` Start the café ambience at the door。点「推门进入」时在点击事件里启动环境音，先用吧台预设 `COUNTER_LAYERS`，选座位后切成座位的混音；页头多了一个静音按钮（入口页不显示），专注页的开关共用同一个处理函数；静音偏好存 `cafe-focus-ambience`，静音过的人下次推门保持安静。
-- `69361a0` Keep an in-progress focus session across refreshes。进行中的会话存 `cafe-focus-session`（任务、座位、饮品、时长、结束时间戳或暂停时的剩余秒数、混音、街声模式），加载时恢复到专注页并显示「座位一直给你留着」；结束时间已过的会话立即完成并盖章；12 小时以上的存档忽略。新文件 `src/lib/session.js`。
-- `26a7add` Split App.jsx into data, lib, audio and component modules。纯重构，行为不变。App.jsx 从 1822 行减到 774 行，其余按「当前状态」里的目录拆开。用切行号的脚本完成，再用构建、ESLint `no-undef` 和浏览器全流程验证。
+- `284b0c3` Stop tracking public/audio; update handoff docs。`public/audio/` 进 `.gitignore` 并从索引移除，本地文件未动；R2 文档补了新 clone 如何取音频。至此 2026-10-01 评审清单全部完成。
+- `74bdf55` Add a web app manifest and ship scene images as WebP。`public/manifest.webmanifest` 加主题色和 Apple 的 meta，图标从 favicon 生成在 `public/icons/`，手机可以「添加到主屏幕」。场景图和兜底背景转成 1600 宽的 WebP（59 MB 变 3.4 MB），代码只引用 `.webp`；PNG 母版留在 `public/` 里方便改图，`vite.config.js` 里的小插件在构建后把它们从 dist 删掉，每次部署从约 76 MB 降到约 10 MB。重新生成用 `python3 scripts/convert-images.py`。
+- `1824b10` Offer a short break after 25 focused minutes。每次会话只提一次：专注满 25 分钟且剩余不少于 5 分钟时，出现座位相关的提示卡（`BREAK_INTERVENTIONS`），可选「休息 5 分钟」或「继续」。休息时主倒计时暂停，显示 5 分钟的休息倒数，到点自动回到任务并放一声杯子落桌的提示音，空格或 Esc 也能提前回来。休息时间不计入专注分钟。
+- `4da3119` Collapse the mixer into a drawer on narrow screens。980px 以下侧栏只露饮品、座位氛围和「调整环境音」按钮，环境音开关和全部滑块收进抽屉；桌面端不变。390px 宽的专注页从约 1800px 高缩到约 900px。
+- `c82063d` Polish: entrance title, mixer icons, shortcuts, a11y, reduced motion。入口页大标题改成「你的座位在等你。」不再和品牌名重复；街声、杯子、后厨滑块换成车、餐具、咖啡豆图标；空格暂停或继续，Esc 先暂停再按一次结束，鼠标设备上显示提示；进度点读出场景名（`copy.sceneNames`），街声按钮加 `aria-pressed`，滑块加百分比 `aria-valuetext`；`prefers-reduced-motion` 下关闭背景漂移和悬停上浮。
+- `6ba0312` Start the café ambience at the door。点「推门进入」时在点击事件里启动环境音，先用吧台预设 `COUNTER_LAYERS`，选座位后切成座位的混音；页头多了一个静音按钮（入口页不显示），专注页的开关共用同一个处理函数；静音偏好存 `cafe-focus-ambience`，静音过的人下次推门保持安静。
+- `d73e21d` Keep an in-progress focus session across refreshes。进行中的会话存 `cafe-focus-session`（任务、座位、饮品、时长、结束时间戳或暂停时的剩余秒数、混音、街声模式），加载时恢复到专注页并显示「座位一直给你留着」；结束时间已过的会话立即完成并盖章；12 小时以上的存档忽略。新文件 `src/lib/session.js`。
+- `18aa3c7` Split App.jsx into data, lib, audio and component modules。纯重构，行为不变。App.jsx 从 1822 行减到 774 行，其余按「当前状态」里的目录拆开。用切行号的脚本完成，再用构建、ESLint `no-undef` 和浏览器全流程验证。
 
 ### 2026-10-02
 
-- `1b1ed2b` Serve audio from Cloudflare R2 and fix focus timer。计时器改为结束时间戳，后台标签页不再漂；倒计时自然结束时停环境音并放门铃；音轨音量大于 0 才加载，为 0 暂停；超过 5 分钟的录音随机起点播放；标签页标题显示倒计时；自定义时长低于 5 分钟忽略；Actions 改用 `build:external-audio` 和 `VITE_AUDIO_BASE_URL`；上传脚本去掉 `--force`；新增 `scripts/r2-cors.json`；重写 `docs/cloudflare-pages-r2.md`；README 部署一节同步。
-- `6ff422c` Add YouTube station as a fourth music option。爵士模式加第四个选项 YouTube，四个预设直播电台加粘贴链接输入框，音量跟随爵士滑块（上限 55），模式和电台存 localStorage，播放器按 YouTube 条款保持 200px 高可见。
-- `3dc3d4a` Replace YouTube stations that block embedding。两个 Lofi Girl 电台 error 150，换成可嵌入的源；旧 ID 自动迁移；播放失败显示提示。
-- `dd541df` Split jazz and YouTube station into two exclusive sliders。用户要求把爵士和 YouTube 分成两条独立滑块：轻爵士保留三个歌单，YouTube 电台有自己的音量，卡片只在音量大于 0 时显示；拉起一条另一条归零，爵士为 0 时点歌单按钮会把爵士开到 0.3；最后用的音源存 `cafe-focus-music-source`，换座位时预设的音乐音量落到这个音源上；旧版存成爵士模式的 `youtube` 自动迁移。
-- `27b5da3` Add cross-session handoff: CLAUDE.md and docs/progress.md。
-- `05e3d06` Add a stamp card that remembers visits。每次满 1 分钟的专注记入 `cafe-focus-visits`；完成或满 10 分钟盖章，10 章一张卡；入口页回访显示第几次来和当前卡，完成页显示新章动画，尊重 prefers-reduced-motion。
+- `9d14ac0` Serve audio from Cloudflare R2 and fix focus timer。计时器改为结束时间戳，后台标签页不再漂；倒计时自然结束时停环境音并放门铃；音轨音量大于 0 才加载，为 0 暂停；超过 5 分钟的录音随机起点播放；标签页标题显示倒计时；自定义时长低于 5 分钟忽略；Actions 改用 `build:external-audio` 和 `VITE_AUDIO_BASE_URL`；上传脚本去掉 `--force`；新增 `scripts/r2-cors.json`；重写 `docs/cloudflare-pages-r2.md`；README 部署一节同步。
+- `91e9d88` Add YouTube station as a fourth music option。爵士模式加第四个选项 YouTube，四个预设直播电台加粘贴链接输入框，音量跟随爵士滑块（上限 55），模式和电台存 localStorage，播放器按 YouTube 条款保持 200px 高可见。
+- `bfe492e` Replace YouTube stations that block embedding。两个 Lofi Girl 电台 error 150，换成可嵌入的源；旧 ID 自动迁移；播放失败显示提示。
+- `e723f5f` Split jazz and YouTube station into two exclusive sliders。用户要求把爵士和 YouTube 分成两条独立滑块：轻爵士保留三个歌单，YouTube 电台有自己的音量，卡片只在音量大于 0 时显示；拉起一条另一条归零，爵士为 0 时点歌单按钮会把爵士开到 0.3；最后用的音源存 `cafe-focus-music-source`，换座位时预设的音乐音量落到这个音源上；旧版存成爵士模式的 `youtube` 自动迁移。
+- `fd6c302` Add cross-session handoff: CLAUDE.md and docs/progress.md。
+- `6518495` Add a stamp card that remembers visits。每次满 1 分钟的专注记入 `cafe-focus-visits`；完成或满 10 分钟盖章，10 章一张卡；入口页回访显示第几次来和当前卡，完成页显示新章动画，尊重 prefers-reduced-motion。
 - 代码之外：建 R2 bucket、上传 24 个音频（3 个大文件走网页上传，缓存头只有 4 小时）、设 CORS、绑域名、设 GitHub 仓库变量。
 
 ### 2026-10-01
@@ -161,7 +163,7 @@
 
 ### 剩余
 
-- 公开仓库的 git 历史里（2026-10-03 之前的提交）还留着那 5 个无授权音频和旧的大文件。要彻底清除需要重写历史并强推，会改掉所有提交号，需要用户同意，而且要先临时关掉分支保护。
+- git 历史里的旧音频：`main` 的历史已在 2026-10-04 清干净（见改动日志）。GitHub 那边旧提交还能通过提交号直链和 `refs/pull/1/head` 到 `refs/pull/17/head` 访问，要彻底清掉只能由仓库主人向 GitHub Support 提请求，请他们删除这些 PR 引用指向的旧对象并做垃圾回收（请求里给出仓库名、受影响的 PR 号 1 到 17、最早被改写的提交 `10dd2a483e46faff29e1348f4d1f24387220af2d`）。状态：等用户。用户确认不再需要后，本机的备份文件夹可以删。
 - 时间档目前只换声音，画面还是雨夜。用户说画面交给 ChatGPT 之后调整。
 - 没做的一个小想法：按时间档自动换默认歌单（早晨咖啡馆、白天摇摆、夜晚小酒馆）。现在歌单是用户自己的偏好，不随时间档变。
 - 备选素材在本机 `freesound/`（两条鸟叫用户说完整保留作备选：`birds-forest-morning`、`birds-dawn-chorus-europe`）；没用上的在各自的 `archive/`。试听和做决定的页面是 `sound-effect/candidates/index.html`，由同目录的 `catalog.py` 和 `build.py` 生成。

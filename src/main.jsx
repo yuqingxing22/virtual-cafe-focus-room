@@ -15,6 +15,17 @@ if (import.meta.env.PROD && analyticsToken) {
   document.head.appendChild(script);
 }
 
+// Error reports go to Sentry, again only when a DSN is provided at build time. The SDK is a
+// separate chunk so it never delays the first paint.
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN?.trim();
+if (import.meta.env.PROD && sentryDsn) {
+  import("./lib/errorReporting.js")
+    .then(({ initErrorReporting }) =>
+      initErrorReporting(sentryDsn, import.meta.env.VITE_APP_VERSION),
+    )
+    .catch(() => {});
+}
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ErrorBoundary>

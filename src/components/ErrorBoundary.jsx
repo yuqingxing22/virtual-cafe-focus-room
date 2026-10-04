@@ -36,6 +36,13 @@ class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     console.error("Café focus room crashed:", error, info?.componentStack);
+    const extra = { componentStack: info?.componentStack };
+    if (window.__cafeReportError) {
+      window.__cafeReportError(error, extra);
+    } else {
+      // The reporting chunk may still be loading (or disabled); it drains this queue on init.
+      (window.__cafePendingErrors ??= []).push({ error, extra });
+    }
   }
 
   render() {

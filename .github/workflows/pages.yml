@@ -34,6 +34,9 @@ jobs:
           VITE_AUDIO_BASE_URL: ${{ vars.VITE_AUDIO_BASE_URL }}
           # Optional repository variable; when empty, no analytics script is loaded.
           VITE_CF_ANALYTICS_TOKEN: ${{ vars.VITE_CF_ANALYTICS_TOKEN }}
+          # Optional repository variable; when empty, no error reporting is loaded.
+          VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
+          VITE_APP_VERSION: ${{ github.sha }}
         run: npm run build:external-audio
 
       - name: Deploy

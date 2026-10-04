@@ -6,7 +6,7 @@
 
 - **线上**：https://cafe.tempomyplanner.com/ ，已公开给真实用户。GitHub Pages 托管，自定义域名在 `public/CNAME`。`main` 有分支保护，只能通过 PR 合并；合并到 `main` 触发 `.github/workflows/pages.yml`，构建后强推到 `gh-pages` 分支，再由 GitHub 的 `pages build and deployment` 发布。两个加起来约一分半。
 - **音频**：Cloudflare R2 bucket `virtual-cafe-focus-room-audio`，自定义域名 https://audio.tempomyplanner.com/ ，28 个文件，对象 key 以 `audio/` 开头，全部有允许公开使用的许可（见 `docs/audio-credits.md`）。环境音分早晨、白天、夜晚三档，由用户手动选，不按时钟自动切换；规则在 `src/lib/timeSlot.js` 和 `src/audio/tracks.js`。GitHub 仓库变量 `VITE_AUDIO_BASE_URL` 指向这个域名，构建时写进代码。本地开发不设这个变量，回落到 `public/audio/`。
-- **代码结构**（2026-10-03 拆分后）：`src/App.jsx` 只剩状态和五个场景的 JSX（约 770 行）；`src/data/` 放饮品、座位、场景图、文案；`src/lib/` 放路径、localStorage、集点卡、音乐槽位、YouTube 工具和格式化；`src/audio/` 放音轨表和 `useAmbientAudio`；`src/components/` 放背景图、集点卡、YouTube 播放器、滑块。样式仍在 `src/styles.css`。React 19、Vite 8、lucide-react 图标。没有测试；lint 用 scratchpad 里临时装的 ESLint 8 跑 `no-undef` 检查。
+- **代码结构**（2026-10-03 拆分后）：`src/App.jsx` 只剩状态和五个场景的 JSX（约 770 行）；`src/data/` 放饮品、座位、场景图、文案；`src/lib/` 放路径、localStorage、集点卡、音乐槽位、YouTube 工具和格式化；`src/audio/` 放音轨表和 `useAmbientAudio`；`src/components/` 放背景图、集点卡、YouTube 播放器、滑块。样式仍在 `src/styles.css`。React 19、Vite 8、lucide-react 图标。动画库 Motion（`src/motion/`）和画布库 PixiJS（`src/canvas/`）已装好，见 `docs/animation.md`。没有测试；lint 用 scratchpad 里临时装的 ESLint 8 跑 `no-undef` 检查。
 - **浏览器验证方式**：`npm run build` 后 `npx vite preview --port 4173 --strictPort`，用 Playwright 或 Chrome 打开 http://localhost:4173/ 。之前的 session 用 `page.evaluate` 里按按钮文字点击的方式走完整流程，用覆盖 `Date.now` 的办法快进倒计时。
 
 ## 工作约定
@@ -119,6 +119,14 @@
 10. **404 页面和 robots.txt**。状态：完成（PR #1）。
 11. **回滚预案**。见上面「回滚」一节。状态：完成（PR #1）。
 12. **三个大音频补一年缓存头**。状态：完成（2026-10-04，没有重传，用临时 Worker 在 R2 内部复制，见改动日志）。
+
+### 代码结构和动画（2026-10-04 起）
+
+背景：用户觉得很多交互做不了、不够好看，决定在现有 React 上加动画库和画布库，并整理代码结构；沉浸感的具体设计交给 ChatGPT。
+
+1. **装动画库和画布库，建基础模块**。Motion 做界面动效，PixiJS 做场景画布，用法见 `docs/animation.md`。状态：完成（见改动日志），还没有接到任何页面上。
+2. **拆 `App.jsx`**。目标：`src/scenes/` 每个场景一个组件，`src/hooks/` 放计时和休息（`useFocusSession`）、声音和混音（`useSoundscape`）、语言，`src/components/` 加页头、混音器、时间档按钮（现在重复写了两遍）、插入事件卡片。纯重构，行为不变，用改动前后的全流程截图逐像素对比验证（截图脚本用 Playwright 的假时钟走完入口、点单、选座、设定、专注、暂停提醒、休息、刷新恢复、完成、提前结束，桌面和手机、中英文各一遍）。要保留 session 61 加的 `JAZZ_ENABLED` 分支和 `audioLayers` 置零逻辑。状态：待做，等 61 的「暂停爵士」PR 合并后再开始，避免冲突。
+3. **拆 `styles.css`**。按场景和组件分到 `src/styles/`，同一个选择器现在散在好几处（比如 `.session-summary`、`.duration`、`.complete-panel`），合并时用同一套截图对比确认外观不变。这是 ChatGPT 主要改的文件，拆之前先确认它没有进行中的设计分支，拆完同步更新 `AGENTS.md`。状态：待做，排在第 2 项之后。
 
 ### 剩余
 

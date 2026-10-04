@@ -1,0 +1,17 @@
+/* Canvas layer for scene animation. Fills the nearest positioned parent. */
+.canvas-stage {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.canvas-stage.interactive {
+  pointer-events: auto;
+}
+
+.canvas-stage-host,
+.canvas-stage-host canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

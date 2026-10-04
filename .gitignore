@@ -6,3 +6,7 @@ sound-effect/
 .env
 *.local
 public/audio/
+
+# Audio candidates downloaded for auditioning; only chosen, processed files go to R2.
+pixabay/
+freesound/

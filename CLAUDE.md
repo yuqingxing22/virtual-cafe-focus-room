@@ -6,7 +6,9 @@
 
 ## 开工前
 
-- 先 `git checkout main && git pull`，再看 `git status` 和 `gh pr list`。可能有别的 session 或 ChatGPT 在同一个仓库工作，不要在有未提交改动的文件上叠加修改，也不要动别人未合并的分支。
+- 先 `git fetch`，再看 `git status` 和 `gh pr list`。可能有别的 session 或 ChatGPT 在同一个仓库工作，不要在有未提交改动的文件上叠加修改，也不要动别人未合并的分支。
+- 多个 session 打开的是同一个文件夹，在里面 `git checkout` 或 `git stash` 会把别人的分支和未提交改动一起切走。要改代码就开自己的 worktree：`git worktree add ../virtual_cafe_focus_room-<简称> -b <分支> origin/main`，在那里工作，共用文件夹的分支不要动。worktree 里本地开发需要声音的话，把 `public/audio` 软链接到主文件夹的那份。
+- 开工时用 ListAgents 看还有哪些咖啡店 session 在跑，用 SendMessage 告诉它们你的分支和要改的文件；开 PR、合并、改共用的东西（音频、R2、`docs/progress.md`、规则文件）时也通知一声。
 - 一次只做 `docs/progress.md` 待办里的一项。
 
 ## 工作流程：分支加 PR，不直接推 main

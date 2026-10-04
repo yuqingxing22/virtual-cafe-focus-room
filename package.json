@@ -12,8 +12,11 @@
     "upload:audio:r2": "scripts/upload-audio-r2.sh"
   },
   "dependencies": {
+    "@pixi/react": "^8.0.5",
     "@sentry/browser": "^11.4.0",
     "lucide-react": "^0.468.0",
+    "motion": "^12.43.0",
+    "pixi.js": "^8.22.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

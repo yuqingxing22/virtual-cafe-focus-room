@@ -18,6 +18,8 @@
 
 一次只做一件事，PR 保持小。不要在别人未合并的分支上叠加修改。
 
+本机上可能有几个助手同时打开同一个文件夹。在里面切分支或 `git stash` 会把别人的未提交改动一起带走，所以每个助手在自己的 worktree 里工作（`git worktree add ../virtual_cafe_focus_room-<简称> -b <分支> origin/main`），不要改共用文件夹当前的分支。
+
 ## 不要做的事
 
 - 不要自己压缩、裁剪或替换音频文件。用户要的是完整的真实录音。线上的环境音由 `scripts/process-ambience.py` 按用户确认过的方案生成，换素材或改裁剪点要先问用户，并更新 `docs/audio-credits.md`。新素材必须有允许公开网站使用的许可，不能从 YouTube 抓。
@@ -32,6 +34,7 @@
 - 样式在 `src/styles.css`，颜色变量在文件开头的 `:root`。文案在 `src/data/copy.js`，中英文都要写。
 - 场景背景图在 `public/assets/scenes/<场景>/01-03.webp`，由 PNG 母版用 `python3 scripts/convert-images.py` 生成。换图时放 PNG 再跑脚本，视觉规范见 `docs/visual-asset-guidelines.md`。
 - 产品语气是「轻、不责备、把人带回任务」，见 `docs/interaction-roadmap.md`。
+- 动画：界面动效用 Motion（`src/motion/`），画面里会动的东西用 PixiJS 画布（`src/canvas/`）。怎么选、怎么用见 `docs/animation.md`。
 - 窄屏（980px 以下）专注页的混音器是抽屉；系统设置了「减少动态效果」时不要有位移动画。
 - 无障碍属性（`aria-pressed`、`aria-valuetext`、进度点的场景名）是特意加的，改组件时保留。
 

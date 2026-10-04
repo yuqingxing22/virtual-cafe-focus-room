@@ -1,0 +1,222 @@
+/* App frame: backdrop, shade, header and the scene container. */
+
+.app {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background-image: url("/assets/cafe-room.webp");
+  background-position: center;
+  background-size: cover;
+}
+
+.app::before {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  content: "";
+  background:
+    radial-gradient(circle at 18% 22%, rgba(216, 152, 69, 0.18), transparent 30rem),
+    linear-gradient(90deg, rgba(16, 24, 22, 0.76), rgba(34, 22, 15, 0.42) 48%, rgba(15, 12, 10, 0.7));
+}
+
+.scene-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+}
+
+.scene-backdrop-image {
+  opacity: 0;
+  transform: scale(1.025) translate3d(-0.25%, -0.2%, 0);
+  transition:
+    opacity 2200ms cubic-bezier(0.45, 0, 0.2, 1),
+    transform 12000ms ease;
+}
+
+.scene-backdrop-image.active {
+  opacity: 1;
+  transform: scale(1.055) translate3d(0.25%, 0.2%, 0);
+}
+
+.background-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.42));
+  pointer-events: none;
+}
+
+.scene-focus::before {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(216, 152, 69, 0.12), transparent 30rem),
+    linear-gradient(90deg, rgba(10, 14, 13, 0.36), rgba(28, 19, 13, 0.3) 46%, rgba(15, 12, 10, 0.64));
+}
+
+.scene-focus .background-shade {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.28));
+}
+
+.app-header {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(1180px, calc(100% - 40px));
+  min-height: 72px;
+  margin: 0 auto;
+  padding: 16px 0;
+}
+
+.brand,
+.header-controls,
+.progress-dots,
+.language-switch,
+.traffic-mode,
+.mode-buttons,
+.presence-strip,
+.session-summary {
+  display: flex;
+  align-items: center;
+}
+
+.brand {
+  gap: 10px;
+  color: var(--paper);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.brand svg {
+  width: 22px;
+  height: 22px;
+  color: var(--amber);
+}
+
+.header-controls {
+  gap: 16px;
+  justify-content: flex-end;
+}
+
+.language-switch {
+  gap: 4px;
+  border: 1px solid rgba(247, 239, 227, 0.18);
+  border-radius: 8px;
+  background: rgba(18, 15, 12, 0.36);
+  padding: 4px;
+}
+
+.language-switch button {
+  min-height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  padding: 0 10px;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.language-switch button.active {
+  background: var(--amber);
+  color: #1c120b;
+}
+
+.ambience-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(247, 239, 227, 0.18);
+  border-radius: 8px;
+  background: rgba(18, 15, 12, 0.36);
+  color: var(--muted);
+  transition:
+    color 160ms ease,
+    border-color 160ms ease;
+}
+
+.ambience-switch.on {
+  border-color: rgba(216, 152, 69, 0.7);
+  color: var(--amber);
+}
+
+.ambience-switch svg {
+  width: 18px;
+  height: 18px;
+}
+
+.progress-dots {
+  gap: 8px;
+}
+
+.progress-dots span {
+  width: 9px;
+  height: 9px;
+  border: 1px solid rgba(247, 239, 227, 0.42);
+  border-radius: 999px;
+  background: rgba(247, 239, 227, 0.14);
+}
+
+.progress-dots span.active {
+  width: 28px;
+  border-color: rgba(216, 152, 69, 0.95);
+  background: var(--amber);
+}
+
+.scene {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  min-height: calc(100vh - 72px);
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 24px 0 48px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-backdrop-image,
+  .scene-backdrop-image.active {
+    transform: none;
+    transition: opacity 600ms ease;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-header,
+  .scene {
+    width: min(100% - 28px, 1180px);
+  }
+
+  .app-header {
+    align-items: flex-start;
+    gap: 12px;
+    min-height: 82px;
+  }
+
+  .header-controls {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+  }
+
+  .brand span {
+    max-width: 142px;
+    line-height: 1.3;
+  }
+
+  .language-switch button {
+    padding: 0 8px;
+  }
+
+  .scene {
+    min-height: calc(100vh - 82px);
+    padding-top: 10px;
+  }
+}

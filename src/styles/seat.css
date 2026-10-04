@@ -1,0 +1,10 @@
+/* Seat scene: seat cards. */
+
+.seat-card {
+  min-height: 228px;
+}
+
+.seat-card p {
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+}

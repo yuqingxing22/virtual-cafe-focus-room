@@ -62,6 +62,7 @@
 
 ### 2026-10-04
 
+- PR #21 iPod 样式的爵士播放器原型（session d4）。用户要的播放器：屏幕上按电台显示封面并做 Cover Flow 滑动，可以转的点按转盘，耳机线，机身颜色可选。代码在 `src/components/IPod/`（`IPod.jsx`、`covers.jsx`、`useStationPlayer.js`、`ipod.css`），曲目表在 `src/data/jazzStations.js`（6 个电台 44 首）。**只是原型，没有接进网站**：没有任何代码引用它，`JAZZ_ENABLED` 仍是 `false`，线上行为不变。预览页 `ipod-preview.html` 只在 `npm run dev` 下能打开（`/ipod-preview.html`），不是构建入口，`dist/` 里没有它。用法、localStorage key 和还没做的事见下面「暂时关闭的功能」。在 dev server 上用浏览器走过：转盘旋转、滑动、选台播放、上下首、音量、暂停、换色并记住、快放完时预加载下一首并自动接上。手机宽度没有测。
 - PR #20 日志更新。用户说不再需要历史重写前的本机备份，Claude 把 `~/Downloads/virtual_cafe_focus_room-backups/`（397 MB，含旧音频和新旧提交号对照表）移进了废纸篓，清空废纸篓由用户自己做。仓库和线上没有任何变化。
 - PR #19 日志更新。历史重写之后，用户决定仓库保持公开，不改 private，也不为残留的旧提交删库重建；理由和以后改 private 的前提记在待办「剩余」里。
 - 重写 git 历史，去掉旧音频（强推，不是 PR；这条日志在 PR #18）。用户明确同意后执行。用 `git filter-repo --invert-paths --path public/audio/` 把 `public/audio/` 从 `main` 的全部 39 个提交里去掉：39 个提交都保留，作者、时间、提交说明不变；逐个提交核对过「旧文件树去掉 `public/audio/` 等于新文件树」，最新文件树和重写前完全相同，所以网站内容没有变。`main` 从 `2e108d0` 变成 `9bf1e99`。历史里全部文件未压缩合计从 384 MB 降到 130 MB（`public/audio/` 占 254 MB，其中包括那 5 个无授权的环境音），新 clone 的 `.git` 是 129 MB，里面没有任何音频路径。过程：先通知 f1 和 d4 并得到确认；在仓库外做了完整备份；在临时副本里改写并验证；临时取消分支保护后用 `--force-with-lease` 强推，随即按 `scripts/branch-protection.json` 恢复并核对与之前一致。保护一共解除了两次：第一次约 1 秒，推送命令因为 zsh 把 `$NEW:refs` 里的 `:r` 当成修饰符而在本地报错，什么都没推出去；改成 `${NEW}:refs/heads/main` 后第二次约 28 秒，推送成功。之后两个部署 workflow 都成功，线上冒烟测试 32 项全部通过。主文件夹的 `main` 指针从旧的 `f97fdc7` 挪到新历史里的同一个提交 `a5264cd`（只动指针，文件没动）。**还没清干净的部分**：GitHub 上旧提交仍然能通过提交号直链访问（比如 `/commit/2e108d0`、`/raw/<旧提交号>/public/audio/rain.mp3`），因为 17 个旧 PR 的引用（`refs/pull/1/head` 到 `refs/pull/17/head`）还指着旧历史，这些引用仓库主人删不了，GitHub 报告的仓库体积也要等他们清理后才会变。要彻底清除得由用户向 GitHub Support 提请求，见待办「剩余」。旧 PR 页面上「合并为某提交」的链接指向的也是旧号。本机共用的 `.git` 里旧对象也还在（备份、reflog、重写前的本地分支），只在本机，不影响公开仓库。
@@ -108,7 +109,8 @@
 ## 暂时关闭的功能
 
 - **爵士（2026-10-04 起，直到用户说恢复）**。用户说「jazz 音乐功能暂时关闭，我们正在优化」，由 session d4 转达、本 session 执行（PR #11）。做法是只停用不删除：`src/lib/music.js` 里的 `JAZZ_ENABLED = false`。关闭时混音器里爵士的滑块和三个歌单按钮换成一行提示（`copy.jazzPaused`），`App.jsx` 在把混音传给音频引擎前把 jazz 层置零，所以座位预设、已保存的会话、浏览器里存的爵士偏好都不会出声，也不会请求爵士文件。YouTube 电台不受影响。`JAZZ_PLAYLISTS`、`useAmbientAudio.js` 的爵士部分、`public/audio/jazz/`、R2 上的 `audio/jazz/` 都原样保留。**恢复方法：把 `JAZZ_ENABLED` 改回 `true`。**
-- 新的爵士曲库在本机项目根目录 `jazz-music/`（session d4 整理：6 个电台 44 首，piano-corner、mellow-sax、cocktail-hour、lofi-jazz、guitar-patio、swing-time，来源表 `jazz-music/SOURCES.md`，通过 `.git/info/exclude` 本地忽略）。原来的 `sound-effect/jazz/` 已移走，不要再引用。新电台怎么接进网页还没定，等用户决定。在那之前不要改 `JAZZ_PLAYLISTS` 和爵士音频。
+- 新的爵士曲库在本机主文件夹的 `jazz-music/`（session d4 整理，不进 git）：6 个电台 44 首，piano-corner、mellow-sax、cocktail-hour、lofi-jazz、guitar-patio、swing-time，全部来自 Pixabay，来源表 `jazz-music/SOURCES.md`。各电台文件夹里是 256 kbps 原版，用户要求保留不删。**上线用 128 kbps**：用户在 2026-10-04 听过对比后决定的（听的人流量减半，大陆用户更不容易卡），由 `jazz-music/encode_web.sh` 生成到 `jazz-music/_web-128k/<电台>/`，文件名相同，共 103.6 MB，单首最大 5 MB。**还没有上传 R2**，目标路径是 `audio/jazz/<电台>/<文件名>`，和 `src/data/jazzStations.js` 里写的一致。原来的 `sound-effect/jazz/` 已移走，不要再引用。
+- iPod 播放器原型（PR #21）是恢复爵士时要用的界面。现状：`<IPod lang="zh" />`，可选的 `stations` 默认是 `JAZZ_STATIONS`；自己带一个 audio 元素（`useStationPlayer`），音量是组件内部状态；机身颜色存 localStorage 的 `cafe-focus-ipod-color`（唯一的 key）；文案在 `IPod.jsx` 顶部的 `IPOD_COPY`，还没并入 `COPY`。接进网站还要做：把 128 kbps 文件传到 R2 并写进 `docs/audio-credits.md`；放进 `src/components/Mixer.jsx`，侧栏只有 300 像素宽而整机连耳机线是 420 × 600，需要收起和展开两种形态；遵守单一音乐槽位（和 YouTube 电台互斥，逻辑在 `src/hooks/useSoundscape.js`）；音量和暂停要跟混音器、环境音总开关、倒计时结束联动；方向键和空格不要和专注页的快捷键打架；手机宽度；打开 `JAZZ_ENABLED` 并在同一个 PR 里改冒烟测试的爵士检查。界面上是否由 6 个新电台取代原来的 cafe、swing、club 三个歌单按钮，等用户决定；旧歌单的代码和文件不删。在那之前不要改 `JAZZ_PLAYLISTS` 和线上的爵士音频。
 
 ## 多个 session 并行
 
@@ -117,7 +119,7 @@
 | session | 在做什么 | 工作目录 | 会动的文件 |
 | --- | --- | --- | --- |
 | 运维和功能（最早建这个文件的 session） | 上线运维、环境音、时间档、暂停爵士 | worktree `../virtual_cafe_focus_room-ops`，每项改动一个短命分支 | 视任务而定。动 `App.jsx`、`styles.css`、`package.json` 前先问 f1 |
-| d4 | 整理爵士曲库（`jazz-music/`，6 个电台 44 首） | 主文件夹，只碰不进 git 的 `jazz-music/` | 不碰网站代码 |
+| d4 | 爵士曲库（`jazz-music/`）和 iPod 播放器原型（PR #21，未接进网站） | worktree `../virtual_cafe_focus_room-d4`；曲库在主文件夹的 `jazz-music/` | `src/components/IPod/`、`src/data/jazzStations.js`、预览页。接入时会动 `Mixer.jsx`、`useSoundscape.js`，动之前先通知 |
 | f1 | 结构重构：`App.jsx` 拆成 `src/scenes/`、`src/hooks/`、`src/components/Mixer` 等，`styles.css` 拆成多个文件；motion 和 PixiJS 基础模块（PR #12 已合并） | worktree `../virtual_cafe_focus_room-f1` | `src/` 大部分、`package.json`。不碰爵士逻辑和音频，保留 `JAZZ_ENABLED` 开关和 `audioLayers` 置零 |
 
 （状态截至 2026-10-04。）

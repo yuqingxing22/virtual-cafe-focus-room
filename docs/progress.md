@@ -87,6 +87,10 @@
 
 - 评审线上站点和代码，产出 `to-do.md`。
 
+## 暂时不要动的部分
+
+- **爵士（2026-10-04 起，直到用户说可以）**。另一个 session（virtual-cafe-focus-room-d4）转述用户的话：爵士音乐功能正在优化，先不要改爵士相关的代码和音频。范围：`src/audio/tracks.js` 里的 `JAZZ_PLAYLISTS`、`src/audio/useAmbientAudio.js` 的爵士部分、`public/audio/jazz/`、R2 上的 `audio/jazz/`。那个 session 把用户收集的 44 首 Pixabay 爵士曲整理成了 6 个电台，放在本机项目根目录的 `jazz-music/`（piano-corner、mellow-sax、cocktail-hour、lofi-jazz、guitar-patio、swing-time），来源表是 `jazz-music/SOURCES.md`。这个文件夹通过 `.git/info/exclude` 本地忽略，不在 git 里。原来的 `sound-effect/jazz/` 已经移走，不要再引用。线上三个爵士歌单目前照常，新电台怎么接进网页还没定，等用户决定。这一条是转述，记录它的 session 没有直接向用户确认过。
+
 ## 待办
 
 2026-10-01 评审清单已在 2026-10-03 全部完成（见最下面「已完成」）。现在的待办是上线运维。

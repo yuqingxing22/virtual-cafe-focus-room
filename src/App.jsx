@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bean,
+  Bird,
   Car,
   Check,
   ChevronDown,
@@ -11,11 +12,14 @@ import {
   Keyboard,
   Laptop,
   MessageCircle,
+  Moon,
   Music,
   Pause,
   Play,
   Radio,
   Square,
+  Sun,
+  Sunrise,
   TimerReset,
   Utensils,
   Volume2,
@@ -34,8 +38,14 @@ import { formatTime } from "./lib/format.js";
 import { DEFAULT_MUSIC_LEVEL, JAZZ_MODES, applyMusicSource, readMusicSource } from "./lib/music.js";
 import { clearSavedSession, readSavedSession, writeSavedSession } from "./lib/session.js";
 import { readStored, writeStored } from "./lib/storage.js";
+import { TIME_SLOTS, applyTimeSlot, readTimeSlot } from "./lib/timeSlot.js";
 import { STAMP_MINUTES, readVisits, writeVisits } from "./lib/visits.js";
 import { RETIRED_YOUTUBE_IDS, YOUTUBE_STATIONS, parseYouTubeId } from "./lib/youtube.js";
+
+const TIME_SLOT_ICONS = { morning: Sunrise, day: Sun, night: Moon };
+
+// A seat (or counter) preset as it should sound in a time slot, with music in the preferred slot.
+const presetFor = (layers, slot, source) => applyMusicSource(applyTimeSlot(layers, slot), source);
 
 // Break offer: after this much focused time, when at least this much is left, for this long.
 const BREAK_AFTER_SECONDS = 25 * 60;
@@ -73,7 +83,9 @@ function App() {
   const [sessionResult, setSessionResult] = useState(null);
   const [musicSource, setMusicSource] = useState(readMusicSource);
   const [layerMix, setLayerMix] = useState(
-    () => restored?.layerMix ?? applyMusicSource(COUNTER_LAYERS, readMusicSource()),
+    () =>
+      restored?.layerMix ??
+      presetFor(COUNTER_LAYERS, restored?.timeSlot ?? readTimeSlot(), readMusicSource()),
   );
   // "off" means the visitor muted the café; then entering the door stays silent next time.
   const [ambiencePref, setAmbiencePref] = useState(() =>
@@ -81,7 +93,8 @@ function App() {
   );
   // The seat effect below must not overwrite a restored mix on the first render.
   const skipSeatMixRef = useRef(Boolean(restored?.layerMix));
-  const [trafficMode, setTrafficMode] = useState(restored?.trafficMode ?? "light");
+  // Morning, daytime or night café; chosen by the visitor and remembered.
+  const [timeSlot, setTimeSlot] = useState(() => restored?.timeSlot ?? readTimeSlot());
   const [jazzMode, setJazzMode] = useState(() =>
     readStored("cafe-focus-jazz-mode", "cafe", (value) => JAZZ_MODES.includes(value)),
   );
@@ -125,8 +138,8 @@ function App() {
   }, [customDuration, duration]);
 
   const ambientModes = useMemo(
-    () => ({ traffic: trafficMode, jazz: jazzMode }),
-    [trafficMode, jazzMode],
+    () => ({ time: timeSlot, jazz: jazzMode }),
+    [timeSlot, jazzMode],
   );
   const ambient = useAmbientAudio(layerMix, ambientModes);
 
@@ -141,6 +154,10 @@ function App() {
   useEffect(() => {
     writeStored("cafe-focus-ambience", ambiencePref);
   }, [ambiencePref]);
+
+  useEffect(() => {
+    writeStored("cafe-focus-time-slot", timeSlot);
+  }, [timeSlot]);
 
   const toggleAmbience = () => {
     if (ambient.enabled) {
@@ -189,10 +206,10 @@ function App() {
       return;
     }
     // The seat preset puts music in the slot the user last preferred (jazz or YouTube).
-    setLayerMix(applyMusicSource(selectedSeat.layers, musicSource));
+    setLayerMix(presetFor(selectedSeat.layers, timeSlot, musicSource));
     // Changing the preferred source later should not reset the whole mix.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSeat]);
+  }, [selectedSeat, timeSlot]);
 
   useEffect(() => {
     if (scene !== "focus" || !isRunning) return undefined;
@@ -233,11 +250,11 @@ function App() {
       endAt: isRunning ? endAtRef.current : null,
       remaining: isRunning ? null : remaining,
       layerMix,
-      trafficMode,
+      timeSlot,
     });
     // `remaining` is read only when pausing, and pausing already changes isRunning.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scene, isRunning, task, seat, drink, effectiveDuration, layerMix, trafficMode]);
+  }, [scene, isRunning, task, seat, drink, effectiveDuration, layerMix, timeSlot]);
 
   useEffect(() => {
     if (scene !== "focus" || !isRunning) return undefined;
@@ -431,7 +448,7 @@ function App() {
     ambient.stopAudio();
     setLastVisit(null);
     setRestoredNotice(false);
-    setLayerMix(applyMusicSource(COUNTER_LAYERS, musicSource));
+    setLayerMix(presetFor(COUNTER_LAYERS, timeSlot, musicSource));
     setScene("entrance");
     setDrink(null);
     setSeat(null);
@@ -447,7 +464,6 @@ function App() {
     setBreakOffered(false);
     setBreakEndAt(null);
     setBreakNotice(false);
-    setTrafficMode("light");
   };
 
   const updateLayer = (key, value) => {
@@ -643,6 +659,23 @@ function App() {
                 />
               </label>
             </div>
+            <div className="mode-buttons time-slots" role="group" aria-label={copy.timeSlotLabel}>
+              {TIME_SLOTS.map((slot) => {
+                const SlotIcon = TIME_SLOT_ICONS[slot];
+                return (
+                  <button
+                    className={timeSlot === slot ? "active" : ""}
+                    key={slot}
+                    type="button"
+                    aria-pressed={timeSlot === slot}
+                    onClick={() => setTimeSlot(slot)}
+                  >
+                    <SlotIcon aria-hidden="true" />
+                    {copy.timeSlots[slot]}
+                  </button>
+                );
+              })}
+            </div>
             <div className="ritual-list">
               <button
                 className={`ritual-item ${ritual.phone ? "done" : ""}`}
@@ -814,6 +847,23 @@ function App() {
                 {ambient.enabled ? copy.ambienceOn : copy.startAmbience}
               </button>
               <div className="mixer">
+                <div className="mode-buttons time-slots" role="group" aria-label={copy.timeSlotLabel}>
+                  {TIME_SLOTS.map((slot) => {
+                    const SlotIcon = TIME_SLOT_ICONS[slot];
+                    return (
+                      <button
+                        className={timeSlot === slot ? "active" : ""}
+                        key={slot}
+                        type="button"
+                        aria-pressed={timeSlot === slot}
+                        onClick={() => setTimeSlot(slot)}
+                      >
+                        <SlotIcon aria-hidden="true" />
+                        {copy.timeSlots[slot]}
+                      </button>
+                    );
+                  })}
+                </div>
                 <SoundSlider
                   icon={<Coffee aria-hidden="true" />}
                   label={copy.soundLabels.cafe}
@@ -832,24 +882,14 @@ function App() {
                   value={layerMix.traffic}
                   onChange={(value) => updateLayer("traffic", value)}
                 />
-                <div className="traffic-mode" aria-label={copy.trafficModeLabel}>
-                  <button
-                    className={trafficMode === "light" ? "active" : ""}
-                    type="button"
-                    aria-pressed={trafficMode === "light"}
-                    onClick={() => setTrafficMode("light")}
-                  >
-                    {copy.trafficModes.light}
-                  </button>
-                  <button
-                    className={trafficMode === "heavy" ? "active" : ""}
-                    type="button"
-                    aria-pressed={trafficMode === "heavy"}
-                    onClick={() => setTrafficMode("heavy")}
-                  >
-                    {copy.trafficModes.heavy}
-                  </button>
-                </div>
+                {timeSlot === "morning" && (
+                  <SoundSlider
+                    icon={<Bird aria-hidden="true" />}
+                    label={copy.soundLabels.birds}
+                    value={layerMix.birds ?? 0}
+                    onChange={(value) => updateLayer("birds", value)}
+                  />
+                )}
                 <SoundSlider
                   icon={<Keyboard aria-hidden="true" />}
                   label={copy.soundLabels.keys}

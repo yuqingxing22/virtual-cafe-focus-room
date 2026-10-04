@@ -46,6 +46,7 @@ export const SEATS = [
       traffic: 0.36,
       backCounter: 0.04,
       jazz: 0.08,
+      birds: 0.4,
     },
   },
   {
@@ -65,6 +66,7 @@ export const SEATS = [
       traffic: 0,
       backCounter: 0.08,
       jazz: 0,
+      birds: 0.18,
     },
   },
   {
@@ -84,6 +86,7 @@ export const SEATS = [
       traffic: 0.04,
       backCounter: 0.42,
       jazz: 0.32,
+      birds: 0.12,
     },
   },
   {
@@ -103,6 +106,7 @@ export const SEATS = [
       traffic: 0,
       backCounter: 0,
       jazz: 0,
+      birds: 0.1,
     },
   },
 ];
@@ -116,6 +120,7 @@ export const COUNTER_LAYERS = {
   traffic: 0.12,
   backCounter: 0.32,
   jazz: 0.14,
+  birds: 0.2,
 };
 
 export const DURATIONS = [25, 45, 60, 90];

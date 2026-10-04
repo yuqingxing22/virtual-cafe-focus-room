@@ -1,0 +1,24 @@
+/* Complete scene. */
+
+.complete-panel .stamp-card {
+  margin-top: 24px;
+}
+
+.complete-panel {
+  justify-self: center;
+}
+
+.complete-panel h2 {
+  max-width: 12ch;
+}
+
+.complete-panel p {
+  margin: 20px 0 0;
+  font-size: 1.05rem;
+}
+
+@media (max-width: 640px) {
+  .complete-panel {
+    padding: 20px;
+  }
+}

@@ -1,0 +1,44 @@
+/* Order scene: barista dialogue and the next-step bar. */
+
+.barista-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  margin: 28px 0;
+  padding: 18px;
+  border: 1px solid rgba(247, 239, 227, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 248, 237, 0.08);
+}
+
+.avatar {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(216, 152, 69, 0.18);
+  color: #f3c16e;
+}
+
+.next-step {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  margin-top: 18px;
+  border-top: 1px solid rgba(247, 239, 227, 0.16);
+  padding-top: 18px;
+  color: var(--paper);
+}
+
+.next-step svg {
+  color: var(--amber);
+}
+
+@media (max-width: 640px) {
+  .next-step {
+    grid-template-columns: 1fr;
+  }
+}

@@ -5,7 +5,7 @@
 ## 当前状态（更新于 2026-10-02）
 
 - **线上**：https://cafe.tempomyplanner.com/ ，已公开给真实用户。GitHub Pages 托管，自定义域名在 `public/CNAME`。`main` 有分支保护，只能通过 PR 合并；合并到 `main` 触发 `.github/workflows/pages.yml`，构建后强推到 `gh-pages` 分支，再由 GitHub 的 `pages build and deployment` 发布。两个加起来约一分半。
-- **音频**：Cloudflare R2 bucket `virtual-cafe-focus-room-audio`，自定义域名 https://audio.tempomyplanner.com/ ，24 个文件全部在线，对象 key 以 `audio/` 开头。GitHub 仓库变量 `VITE_AUDIO_BASE_URL` 指向这个域名，构建时写进代码。本地开发不设这个变量，回落到 `public/audio/`。
+- **音频**：Cloudflare R2 bucket `virtual-cafe-focus-room-audio`，自定义域名 https://audio.tempomyplanner.com/ ，28 个文件，对象 key 以 `audio/` 开头，全部有允许公开使用的许可（见 `docs/audio-credits.md`）。环境音分早晨、白天、夜晚三档，由用户手动选，不按时钟自动切换；规则在 `src/lib/timeSlot.js` 和 `src/audio/tracks.js`。GitHub 仓库变量 `VITE_AUDIO_BASE_URL` 指向这个域名，构建时写进代码。本地开发不设这个变量，回落到 `public/audio/`。
 - **代码结构**（2026-10-03 拆分后）：`src/App.jsx` 只剩状态和五个场景的 JSX（约 770 行）；`src/data/` 放饮品、座位、场景图、文案；`src/lib/` 放路径、localStorage、集点卡、音乐槽位、YouTube 工具和格式化；`src/audio/` 放音轨表和 `useAmbientAudio`；`src/components/` 放背景图、集点卡、YouTube 播放器、滑块。样式仍在 `src/styles.css`。React 19、Vite 8、lucide-react 图标。没有测试；lint 用 scratchpad 里临时装的 ESLint 8 跑 `no-undef` 检查。
 - **浏览器验证方式**：`npm run build` 后 `npx vite preview --port 4173 --strictPort`，用 Playwright 或 Chrome 打开 http://localhost:4173/ 。之前的 session 用 `page.evaluate` 里按按钮文字点击的方式走完整流程，用覆盖 `Date.now` 的办法快进倒计时。
 
@@ -17,7 +17,7 @@
 - 产品语气是「轻、不责备、把人带回任务」，新文案要跟这个调子，中英文都要写（`COPY` 对象）。
 - 用户的本地偏好（语言、爵士模式、电台、集点卡）都存 localStorage，读写要包 try/catch，key 以 `cafe-focus-` 开头。
 - 替换已有音频文件要改文件名，因为 R2 上设了一年不可变缓存。
-- 这台机器的网络上传到约 15 MB 时 TLS 连接会被破坏（wrangler 报 fetch failed，curl 报 bad record mac），限速也没用。新的大文件用 Cloudflare 控制台网页上传。只改已有对象的元数据不需要重传：部署一个带 R2 绑定的临时 Worker，`get` 再 `put` 同一个 key 并带上新的 `httpMetadata`，用返回的 etag 对比本地 md5，做完删掉 Worker。
+- 往 R2 传音频用 `python3 scripts/r2-upload-large.py 文件名...`：它把文件切成 6 MiB 的块逐块重试上传，再用一个临时 Worker 在 Cloudflare 内部拼起来，最后下载回来对 MD5。原因是这台机器的网络上传到约 15 MB 时 TLS 连接会被破坏（wrangler 报 fetch failed，curl 报 bad record mac），限速也没用。新的大文件用 Cloudflare 控制台网页上传。只改已有对象的元数据不需要重传：部署一个带 R2 绑定的临时 Worker，`get` 再 `put` 同一个 key 并带上新的 `httpMetadata`，用返回的 etag 对比本地 md5，做完删掉 Worker。
 - 音乐只有一个槽位：爵士和 YouTube 电台互斥，`updateLayer` 里处理。新增别的音乐源也要遵守这条。
 - 改动日志写 PR 号，日志和代码放在同一个 PR 里。2026-10-03 及之前的条目是直接推 main 时期留下的 commit 号。
 - YouTube 预设电台必须在嵌入播放器里实际播一下才算可用。oembed 返回 200 不代表能嵌入，error 150 表示作者禁止外站播放。直播 ID 会随频道重开直播而变。
@@ -54,6 +54,7 @@
 
 ### 2026-10-04
 
+- PR #8 Licensed ambience with three time slots。把 5 个无授权的环境音换成 9 个新文件（`cafe-morning/day/night`、`rain-day/light`、`street-day/light`、`birds-morning`、`typing-keys`），素材由用户在 `sound-effect/candidates/index.html` 上逐个试听后选定，决定存档在 `sound-effect/candidates/decisions-2026-10-04.json`。`scripts/process-ambience.py` 负责裁剪、按固定增益对齐旧文件的响度、交叉淡化做无缝循环。新增时间档：设定任务页和混音器里都有早晨、白天、夜晚三个按钮，选择存 `cafe-focus-time-slot`；咖啡厅交谈、雨、街道在不同档播放不同录音，后厨、杯子、键盘按比例增减，鸟叫只在早晨出现并有自己的滑块。去掉了街声的轻重开关。隐私页加了声音致谢。新增 `scripts/r2-upload-large.py`。合并并确认线上正常后，从 R2 删除了 5 个旧文件。
 - PR #6 音频来源表。用 `mdls -name kMDItemWhereFroms` 读出每个音频文件的下载网址，填好了 `docs/audio-credits.md`。爵士 11 首、提示音 6 个、搅拌声来自 Pixabay；后厨做咖啡来自一个在简介里声明 CC0 的 YouTube 视频；咖啡厅底噪、雨声、键盘声、两条街声是用下载工具从标准许可的 YouTube 视频里抓的，逐个打开视频页核对过，没有 Creative Commons 标记，简介里也没有允许使用的说明。没有改动任何音频文件。
 - PR #4 日志更新。Sentry 已启用：仓库变量 `VITE_SENTRY_DSN` 已设，重新部署后线上加载了上报模块，Claude 从线上页面手动发了一条测试错误（标题以 Setup test from Claude 开头，可以在 Sentry 里直接 Resolve），Sentry 返回 200。只用 Issues，没有开会话跟踪、性能监控和回放。用户已在 Sentry 打开 Prevent Storing of IP Addresses（Security & Privacy 页）并把 Allowed Domains 设为 `cafe.tempomyplanner.com`（General Settings 页的 Client Security 一节）。两项都验证过：之后的测试事件 Users 为 0；用别的 Origin 伪造的事件没有出现在 Issues 里。注意 Sentry 的接收端对任何请求都返回 200，过滤在后台做，所以不能靠 HTTP 状态码判断事件是否被收下，只能看 Issues 页面。上线运维只剩音频来源表。
 - PR #3 Error reporting and long cache headers。接入 Sentry 错误上报：`src/lib/errorReporting.js` 作为独立 chunk 懒加载（gzip 约 31 KB），没有 DSN 时完全不进包；去掉了 Breadcrumbs 和 BrowserSession 两个集成，不带用户信息，URL 去掉 query 和 hash；错误边界捕获的错误会排队，等上报模块加载后补发；`vite.config.js` 打开 source map；部署 workflow 传入 `VITE_SENTRY_DSN` 和 `VITE_APP_VERSION`（提交 sha）；隐私页加了错误报告一条。用假 DSN 指向本地抓包服务验证过：边界错误和未捕获错误各上报一次，没有面包屑和会话。另外把 rain、cafe-ambience、typing 三个对象的缓存头从 4 小时改成一年：没有重传，在用户的 Cloudflare 账号里临时部署了 Worker `cafe-audio-meta-fix` 在 R2 内部复制，三个文件的大小和 md5 与本地一致，Worker 已删除。Cloudflare 边缘缓存里的旧响应头最多 4 小时后过期。
@@ -97,7 +98,7 @@
 必须先处理：
 
 1. **保护 main，改成分支加 PR 的流程**。main 一推就上线，两个 AI 同时推风险太大。加 CI 构建检查、分支保护、给 ChatGPT 看的 `AGENTS.md`。状态：完成（PR #1，2026-10-04）。
-2. **确认音频和爵士乐的授权**。Claude 在 2026-10-04 从文件的下载记录查清了全部 24 个文件的来源，写在 `docs/audio-credits.md`。19 个没问题（Pixabay 和一个 CC0）。5 个是从 YouTube 视频抓的，没有授权：`cafe-ambience.mp3`、`rain.mp3`、`typing.mp3`、`light-traffic.m4a`、`heavy-traffic.m4a`。状态：等用户决定这 5 个怎么处理（换成有授权的录音、向频道要授权、或者接受风险）。在用户决定之前不要动这些文件。注意公开仓库的 git 历史里也还有这些文件。
+2. **确认音频和爵士乐的授权**。状态：完成（PR #8，2026-10-04）。5 个从 YouTube 抓的无授权环境音已全部换成 Freesound 和 Pixabay 上 CC0 或 Pixabay 许可的录音，旧文件已从 R2 删除。来源见 `docs/audio-credits.md`。
 3. **隐私说明**。YouTube 嵌入换成 youtube-nocookie.com；入口页加一句数据只存本地，详细说明在 `public/privacy.html`。状态：完成（PR #1）。
 
 上线后立刻需要：
@@ -117,7 +118,10 @@
 
 ### 剩余
 
-- 5 个从 YouTube 抓取的环境音没有授权，等用户决定怎么处理，见上线运维第 2 项和 `docs/audio-credits.md`。
+- 公开仓库的 git 历史里（2026-10-03 之前的提交）还留着那 5 个无授权音频和旧的大文件。要彻底清除需要重写历史并强推，会改掉所有提交号，需要用户同意，而且要先临时关掉分支保护。
+- 时间档目前只换声音，画面还是雨夜。用户说画面交给 ChatGPT 之后调整。
+- 没做的一个小想法：按时间档自动换默认歌单（早晨咖啡馆、白天摇摆、夜晚小酒馆）。现在歌单是用户自己的偏好，不随时间档变。
+- 备选素材在本机 `freesound/`（两条鸟叫用户说完整保留作备选：`birds-forest-morning`、`birds-dawn-chorus-europe`）；没用上的在各自的 `archive/`。试听和做决定的页面是 `sound-effect/candidates/index.html`，由同目录的 `catalog.py` 和 `build.py` 生成。
 - `public/audio/` 已不在 git 里。新 clone 的机器要本地开发带声音，需要从 R2 下载一份放回 `public/audio/`（key 和路径一致），或者从 `sound-effect/` 原始录音复制。
 
 ### 之后可以考虑（不在原清单里）

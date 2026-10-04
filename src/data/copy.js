@@ -172,12 +172,14 @@ export const COPY = {
       cups: "Cups / stir",
       traffic: "Street outside",
       backCounter: "Back counter",
+      birds: "Birdsong",
       jazz: "Soft jazz",
     },
-    trafficModeLabel: "Traffic intensity",
-    trafficModes: {
-      light: "Light",
-      heavy: "Heavy",
+    timeSlotLabel: "Time of day",
+    timeSlots: {
+      morning: "Morning",
+      day: "Daytime",
+      night: "Night",
     },
     jazzModeLabel: "Jazz mood",
     jazzModes: {
@@ -288,12 +290,14 @@ export const COPY = {
       cups: "杯子 / 搅拌声",
       traffic: "窗外街声",
       backCounter: "后厨咖啡声",
+      birds: "鸟叫",
       jazz: "轻爵士",
     },
-    trafficModeLabel: "街声强度",
-    trafficModes: {
-      light: "轻街声",
-      heavy: "重交通",
+    timeSlotLabel: "时间段",
+    timeSlots: {
+      morning: "早晨",
+      day: "白天",
+      night: "夜晚",
     },
     jazzModeLabel: "爵士氛围",
     jazzModes: {

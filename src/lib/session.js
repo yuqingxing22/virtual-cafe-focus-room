@@ -29,7 +29,7 @@ export const readSavedSession = () => {
         ? Math.max(0, Math.ceil((saved.endAt - Date.now()) / 1000))
         : Math.max(0, Math.floor(saved.remaining)),
       layerMix: saved.layerMix ?? null,
-      trafficMode: saved.trafficMode === "heavy" ? "heavy" : "light",
+      timeSlot: ["morning", "day", "night"].includes(saved.timeSlot) ? saved.timeSlot : "day",
     };
   } catch {
     return null;

@@ -66,33 +66,12 @@ If a scene image is missing, the app falls back to `public/assets/cafe-room.png`
 
 ## Audio
 
-Original uploaded audio lives locally in `sound-effect/`. That folder is
-intentionally gitignored because it contains very large source recordings.
+Every sound is a real recording with a licence that allows use on a public site (CC0 or the Pixabay licence). Sources, authors and licences are in `docs/audio-credits.md`.
 
-The web app serves the copied browser assets from `public/audio/`:
+The ambience changes with a time-of-day switch (morning, daytime, night) that the visitor chooses on the setup page or in the mixer. Café chatter, rain and street each have a fuller and a sparser recording; birdsong only plays in the morning. Seat presets are multiplied by per-slot factors in `src/lib/timeSlot.js`, and the track table is in `src/audio/tracks.js`.
 
-- `cafe-ambience.mp3`
-- `rain.mp3`
-- `typing.mp3`
-- `coffee-stir.mp3`
-- `light-traffic.m4a`
-- `heavy-traffic.m4a`
-- `back-counter-coffee.mp3`
-- `jazz/cafe/*.mp3`
-- `jazz/swing/*.mp3`
-- `jazz/club/*.mp3`
-- `steps-to-cafe.mp3`
-- `door-open.mp3`
-- `door-bell.mp3`
-- `espresso.mp3`
-- `drip-coffee.mp3`
-- `cup-set-down.mp3`
+- Source recordings live locally in `freesound/` and `pixabay/` (not in git), each with a `SOURCES.md`. Older source material is in `sound-effect/`.
+- `python3 scripts/process-ambience.py` builds the nine ambience tracks into `public/audio/`: it trims each source, matches its loudness to the track it replaced, and crossfades the loop point. It needs ffmpeg.
+- `public/audio/` is not in git either. Production audio is served from Cloudflare R2; see `docs/cloudflare-pages-r2.md`.
 
-The original traffic ambience files in `sound-effect/` are kept as source material.
-The app uses 2-minute `.m4a` web clips in `public/audio/` so the page does not load the full original recordings.
-
-`sound-effect/back-counter-coffee-source.mp3` is copied into the app as `public/audio/back-counter-coffee.mp3`.
-It is strongest by default on the bar seat, where the user is closest to the counter and back-of-house sounds.
-
-Jazz is wired as an optional ambience layer with three ordered playlists:
-Cafe, Swing, and Club. It defaults on for the bar seat, lightly on for the window seat, and off for corner/deep-work and quiet-zone seats.
+Jazz is an optional layer with three hosted playlists (Cafe, Swing, Club). A YouTube station is a separate slider; turning either up silences the other.

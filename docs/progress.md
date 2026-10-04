@@ -17,6 +17,7 @@
 - 产品语气是「轻、不责备、把人带回任务」，新文案要跟这个调子，中英文都要写（`COPY` 对象）。
 - 用户的本地偏好（语言、爵士模式、电台、集点卡）都存 localStorage，读写要包 try/catch，key 以 `cafe-focus-` 开头。
 - 替换已有音频文件要改文件名，因为 R2 上设了一年不可变缓存。
+- **每次部署后跑一遍线上冒烟测试**：`scripts/smoke-test/smoke.mjs`。它用一个全新配置的无头 Chrome 把线上从入口走到完成页，逐项打印 PASS 或 FAIL：三个时间档、倒计时、暂停和空格键、刷新恢复会话、倒计时自然结束并盖章、回访、中文、手机抽屉，以及音频只来自 R2、没有失败请求、没有控制台报错、统计和错误上报已加载。用法见同目录的 README。它不占用 Playwright 或 chrome-devtools 的 MCP 浏览器，别的 session 正在用浏览器时也能跑。故意改了某个功能的文案或结构时，在同一个 PR 里更新对应的检查。
 - 合并后验证线上时注意：GitHub Pages 的 `index.html` 有 10 分钟缓存，同一个浏览器刚访问过的话会拿到旧页面和旧脚本。加一个查询参数（如 `/?fresh=1`）绕过，并确认页面加载的脚本文件名和 `curl` 到的一致。
 - 几个 worktree 共用一个 `.git`。两个 session 同时 `git fetch` 或 `git pull` 会撞锁，报 `cannot lock ref`，重试一次就好。写脚本时别把 `git pull` 放在一长串 `&&` 的开头又不检查结果：它失败后面全跳过，容易误以为做完了。
 - **Cloudflare 运维 token**（2026-10-04 用户建的，名字 `cafe-ops`）存在用户这台 Mac 的 `~/.config/cloudflare/cafe-ops-token`，不在仓库里，也不要复制进任何项目文件夹或贴进聊天。用法：读出文件内容，作为 `Authorization: Bearer` 调 Cloudflare API。它只对 `tempomyplanner.com` 这个域名和用户的账号有这些权限：清缓存、编辑缓存规则、读域名配置、读 DNS（不能改）、读域名流量统计、读网站访问统计（Web Analytics）、编辑通知。R2 和 Workers 不走这个 token，用 wrangler 的登录。域名和账号的 ID 用 token 调 `GET /zones?name=tempomyplanner.com` 就能查到，不写在公开仓库里。
@@ -60,6 +61,7 @@
 
 ### 2026-10-04
 
+- PR #17 线上冒烟测试脚本。新增 `scripts/smoke-test/`（`smoke.mjs` 和 README）。起因：PR #15 的大重构上线后，运维 session 需要独立确认线上没坏，而两套 MCP 浏览器当时都被别的 session 占用，于是自己起无头 Chrome 跑了一遍，全部通过，随后把脚本放进仓库；PR #16 的样式拆分上线后又用它跑了一遍，同样全部通过。它和 `scripts/visual-check/` 的分工：前者是部署后的健康检查，后者是重构前后的逐状态对比。
 - PR #16 Split styles.css。纯重构，外观不变。1296 行的 `src/styles.css` 按用途拆成 `src/styles/` 下 12 个文件，`styles.css` 保留为入口，只有 `@import`（没有删除或改名，`main.jsx` 不用动）。每条规则原样搬到它第一个选择器所属的文件；`@media` 里的规则跟着各自的组件走，在每个文件里各有一份 `@media` 块，所以构建出的 CSS 大了约 0.6 KB。规则是用脚本搬的，没有手改内容。验证分两层：一是静态检查，拆分前后 263 条「选择器加声明」一条不多一条不少，相对顺序颠倒、优先级相同且设置了同一属性的规则对有 557 对，逐对在 174 个页面状态（加上爵士开启和错误页的手写结构）里查过，没有一对能同时命中同一个元素，所以层叠结果不会变，悬停和聚焦状态也包括在内；二是 `scripts/visual-check/` 走一遍，每个元素的计算样式和 DOM 全部一致，截图只有输入框光标那几张有噪声。第一版脚本把 `@media` 里的组合规则整条放进第一个选择器的文件，静态检查查出 6 对真的会变（比如手机宽度下 `.duration-group` 的列数），改成按选择器分开后归零。
 - PR #15 Split App.jsx。纯重构，行为不变。`App.jsx` 从 1113 行减到约 190 行，拆成 `src/scenes/`（六个场景）、`src/hooks/`（`useFocusSession`、`useSoundscape`、`useLanguage`）和几个新组件（`AppHeader`、`Mixer`、`StationPicker`、`TimeSlotButtons`、`InterventionCard`）；原来写了两遍的时间档按钮合成一个组件。所有 effect 仍然在 App 这一层的 hook 里，场景组件只负责显示。`JAZZ_ENABLED` 开关和 `audioLayers` 置零逻辑原样保留（分别在 `Mixer.jsx` 和 `useSoundscape.js`）。验证：新旧两个构建各走一遍 `scripts/visual-check/walk.mjs`（6 种屏幕和语言组合，共 174 个状态），DOM、每个元素的计算样式、标签页标题、localStorage、音频请求全部一致；截图在容差内只有 4 张不同，都是 YouTube 链接输入框有光标的那一张，main 自己跑两次也是这 4 张。另外不拦截音频实际播放了一遍，各时间档播放的文件和音量一致，静音和结束后都停了。
 - PR #14 日志更新。用户建了 Cloudflare 运维 token（见工作约定）。Claude 用它清掉了 5 个已删除旧音频的边缘缓存，这 5 个地址现在返回 404，无授权的音频从线上彻底撤下；验证了 token 的七项权限；加了一条 1 美元的预算提醒。还留着的只有 git 历史里的旧文件。

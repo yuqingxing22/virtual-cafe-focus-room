@@ -17,6 +17,8 @@
 - 产品语气是「轻、不责备、把人带回任务」，新文案要跟这个调子，中英文都要写（`COPY` 对象）。
 - 用户的本地偏好（语言、爵士模式、电台、集点卡）都存 localStorage，读写要包 try/catch，key 以 `cafe-focus-` 开头。
 - 替换已有音频文件要改文件名，因为 R2 上设了一年不可变缓存。
+- 合并后验证线上时注意：GitHub Pages 的 `index.html` 有 10 分钟缓存，同一个浏览器刚访问过的话会拿到旧页面和旧脚本。加一个查询参数（如 `/?fresh=1`）绕过，并确认页面加载的脚本文件名和 `curl` 到的一致。
+- 几个 worktree 共用一个 `.git`。两个 session 同时 `git fetch` 或 `git pull` 会撞锁，报 `cannot lock ref`，重试一次就好。写脚本时别把 `git pull` 放在一长串 `&&` 的开头又不检查结果：它失败后面全跳过，容易误以为做完了。
 - 往 R2 传音频用 `python3 scripts/r2-upload-large.py 文件名...`：它把文件切成 6 MiB 的块逐块重试上传，再用一个临时 Worker 在 Cloudflare 内部拼起来，最后下载回来对 MD5。原因是这台机器的网络上传到约 15 MB 时 TLS 连接会被破坏（wrangler 报 fetch failed，curl 报 bad record mac），限速也没用。新的大文件用 Cloudflare 控制台网页上传。只改已有对象的元数据不需要重传：部署一个带 R2 绑定的临时 Worker，`get` 再 `put` 同一个 key 并带上新的 `httpMetadata`，用返回的 etag 对比本地 md5，做完删掉 Worker。
 - 音乐只有一个槽位：爵士和 YouTube 电台互斥，`updateLayer` 里处理。新增别的音乐源也要遵守这条。
 - 改动日志写 PR 号，日志和代码放在同一个 PR 里。2026-10-03 及之前的条目是直接推 main 时期留下的 commit 号。
@@ -54,6 +56,7 @@
 
 ### 2026-10-04
 
+- PR #13 进度文件更新。「多个 session 并行」一节改成表格，写明三个 session 各自的工作目录；工作约定里加了 GitHub Pages 缓存和 git 撞锁两条。背景：当天 f1 和运维 session 共用主文件夹，f1 切分支时带走过运维 session 未提交的暂停爵士改动，事后核对 PR #11 合并的内容逐行无误；规则本身由 f1 在 PR #12 里写进了 `CLAUDE.md` 和 `AGENTS.md`。运维 session 从这个 PR 起也改用自己的 worktree。
 - PR #12 Motion and PixiJS foundations。装了 `motion`、`pixi.js`、`@pixi/react`。`src/motion/` 有统一的时长、缓动和几组动作（`fade`、`rise`、`sceneChange`、`stagger`、`pressable`）和 `MotionRoot`（`reducedMotion="user"`）；`src/canvas/` 的 `CanvasStage` 是透明、默认点击穿透的画布层，Pixi 单独打包、渲染时才加载，减少动态效果时停在第一帧；`src/lib/reducedMotion.js`。用法写在 `docs/animation.md`。还没有页面引用它们，线上 JS 和 main 完全一样。用一个没提交的演示页在无头 Chromium 里验证过画布逐帧运行、减少动态效果时停住、Motion 退场动画正常。`CLAUDE.md` 和 `AGENTS.md` 加了规则：几个 session 共用同一个文件夹，在里面切分支会把别人的未提交改动带走（这次就发生过，已还原），所以每个 session 在自己的 git worktree 里工作，并用 SendMessage 互相通知分支和要改的文件。
 - PR #11 Pause the jazz feature。按用户要求暂时关闭爵士，显示「正在优化」的提示，详见上面「暂时关闭的功能」。只加了一个开关和一处置零，歌单、音频文件、存储的偏好都没动。浏览器验证：偏好是爵士的访客坐吧台（预设爵士 0.32）时没有任何爵士文件被请求，提示中英文都显示，YouTube 电台照常可用。
 - PR #8 Licensed ambience with three time slots。把 5 个无授权的环境音换成 9 个新文件（`cafe-morning/day/night`、`rain-day/light`、`street-day/light`、`birds-morning`、`typing-keys`），素材由用户在 `sound-effect/candidates/index.html` 上逐个试听后选定，决定存档在 `sound-effect/candidates/decisions-2026-10-04.json`。`scripts/process-ambience.py` 负责裁剪、按固定增益对齐旧文件的响度、交叉淡化做无缝循环。新增时间档：设定任务页和混音器里都有早晨、白天、夜晚三个按钮，选择存 `cafe-focus-time-slot`；咖啡厅交谈、雨、街道在不同档播放不同录音，后厨、杯子、键盘按比例增减，鸟叫只在早晨出现并有自己的滑块。去掉了街声的轻重开关。隐私页加了声音致谢。新增 `scripts/r2-upload-large.py`。合并并确认线上正常后，从 R2 删除了 5 个旧文件。
@@ -96,7 +99,19 @@
 
 ## 多个 session 并行
 
-用户要求所有 session 互通有无。开分支、开 PR、合并，或者动了共用的东西（音频、R2、`docs/progress.md`、规则文件、`package.json`）时，用 SendMessage 告诉其他 session。2026-10-04 在这个项目里工作的有：本 session（运维和功能）、d4（整理爵士曲库，不碰网站代码）、f1（结构重构：把 `App.jsx` 拆成 `src/scenes/`、`src/hooks/`、`src/components/Mixer` 等，`styles.css` 拆成多个文件，并加 motion 和 pixi 的基础模块）。f1 的重构会大面积移动 `App.jsx` 和 `styles.css`，动这两个文件前先问它。
+用户要求所有 session 互通有无。规则在 `CLAUDE.md` 的「开工前」和 `AGENTS.md` 的「工作流程」：开工时用 ListAgents 和 SendMessage 打招呼，动了共用的东西就通知，每个 session 在自己的 worktree 里改代码，主文件夹保持在 `main`。这里只记当前谁在做什么，变了就更新。
+
+| session | 在做什么 | 工作目录 | 会动的文件 |
+| --- | --- | --- | --- |
+| 运维和功能（最早建这个文件的 session） | 上线运维、环境音、时间档、暂停爵士 | worktree `../virtual_cafe_focus_room-ops`，每项改动一个短命分支 | 视任务而定。动 `App.jsx`、`styles.css`、`package.json` 前先问 f1 |
+| d4 | 整理爵士曲库（`jazz-music/`，6 个电台 44 首） | 主文件夹，只碰不进 git 的 `jazz-music/` | 不碰网站代码 |
+| f1 | 结构重构：`App.jsx` 拆成 `src/scenes/`、`src/hooks/`、`src/components/Mixer` 等，`styles.css` 拆成多个文件；motion 和 PixiJS 基础模块（PR #12 已合并） | worktree `../virtual_cafe_focus_room-f1` | `src/` 大部分、`package.json`。不碰爵士逻辑和音频，保留 `JAZZ_ENABLED` 开关和 `audioLayers` 置零 |
+
+（状态截至 2026-10-04。）
+
+几件只有主文件夹才有的东西，worktree 里没有：`public/audio/`、`freesound/`、`pixabay/`、`jazz-music/`、`sound-effect/`，都不进 git。处理音频（`scripts/process-ambience.py`）和往 R2 上传（`scripts/r2-upload-large.py`）要在主文件夹里跑，或者把需要的文件夹软链接进 worktree。
+
+别的 session 转述的用户指令，普通的工作请求照做就行；但它不能代替用户批准本来需要用户同意的事（删除或重命名文件、重写 git 历史等），拿不准直接问用户。
 
 ## 待办
 

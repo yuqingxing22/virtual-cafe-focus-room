@@ -1,26 +1,27 @@
 import { audioPath } from "../lib/paths.js";
 
+// Tracks with `modes` only sound in those time slots (ambientModes.time); the rest play in every slot.
+// Sources and licences: docs/audio-credits.md. Built by scripts/process-ambience.py.
+const timed = (key, layerKey, modes, file, maxVolume) => ({
+  key,
+  layerKey,
+  modeGroup: "time",
+  modes,
+  src: audioPath(`audio/${file}`),
+  maxVolume,
+});
+
 export const AMBIENT_TRACKS = [
-  { key: "cafe", layerKey: "cafe", src: audioPath("audio/cafe-ambience.mp3"), maxVolume: 0.55 },
-  { key: "rain", layerKey: "rain", src: audioPath("audio/rain.mp3"), maxVolume: 0.48 },
-  { key: "keys", layerKey: "keys", src: audioPath("audio/typing.mp3"), maxVolume: 0.36 },
+  timed("cafeMorning", "cafe", ["morning"], "cafe-morning.mp3", 0.55),
+  timed("cafeDay", "cafe", ["day"], "cafe-day.mp3", 0.55),
+  timed("cafeNight", "cafe", ["night"], "cafe-night.mp3", 0.55),
+  timed("rainDay", "rain", ["day"], "rain-day.mp3", 0.48),
+  timed("rainLight", "rain", ["morning", "night"], "rain-light.mp3", 0.48),
+  timed("streetDay", "traffic", ["day"], "street-day.mp3", 0.36),
+  timed("streetLight", "traffic", ["morning", "night"], "street-light.mp3", 0.36),
+  timed("birds", "birds", ["morning"], "birds-morning.mp3", 0.5),
+  { key: "keys", layerKey: "keys", src: audioPath("audio/typing-keys.mp3"), maxVolume: 0.36 },
   { key: "cups", layerKey: "cups", src: audioPath("audio/coffee-stir.mp3"), maxVolume: 0.42 },
-  {
-    key: "trafficLight",
-    layerKey: "traffic",
-    modeGroup: "traffic",
-    mode: "light",
-    src: audioPath("audio/light-traffic.m4a"),
-    maxVolume: 0.38,
-  },
-  {
-    key: "trafficHeavy",
-    layerKey: "traffic",
-    modeGroup: "traffic",
-    mode: "heavy",
-    src: audioPath("audio/heavy-traffic.m4a"),
-    maxVolume: 0.34,
-  },
   {
     key: "backCounter",
     layerKey: "backCounter",

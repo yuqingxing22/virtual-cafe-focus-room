@@ -26,11 +26,11 @@ const randomizeStart = (audio) => {
 
 // Sets volumes, and only loads/plays a track once its volume is above zero.
 const syncAmbientTracks = (setup, layers, ambientModes) => {
-  AMBIENT_TRACKS.forEach(({ key, layerKey, modeGroup, mode, maxVolume }) => {
+  AMBIENT_TRACKS.forEach(({ key, layerKey, modeGroup, modes, maxVolume }) => {
     const audio = setup.tracks[key];
     if (!audio) return;
     const level = layers[layerKey] ?? 0;
-    const modeMultiplier = !mode || ambientModes[modeGroup] === mode ? 1 : 0;
+    const modeMultiplier = !modes || modes.includes(ambientModes[modeGroup]) ? 1 : 0;
     const volume = Math.max(0, Math.min(1, level * maxVolume * modeMultiplier));
     audio.volume = volume;
     if (!setup.enabled) return;

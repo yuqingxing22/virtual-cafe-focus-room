@@ -118,6 +118,7 @@
 
 ### 剩余
 
+- 5 个旧音频已从 R2 删除（2026-10-04，直接请求 R2 返回 404），但 Cloudflare 边缘缓存里还有副本，原地址仍能访问到。wrangler 的登录没有清缓存的权限，需要用户在 Cloudflare 控制台 Caching → Configuration → Purge Cache → Custom Purge 里按 URL 清除这 5 个地址：`https://audio.tempomyplanner.com/audio/` 加上 `cafe-ambience.mp3`、`rain.mp3`、`typing.mp3`、`light-traffic.m4a`、`heavy-traffic.m4a`。状态：等用户。
 - 公开仓库的 git 历史里（2026-10-03 之前的提交）还留着那 5 个无授权音频和旧的大文件。要彻底清除需要重写历史并强推，会改掉所有提交号，需要用户同意，而且要先临时关掉分支保护。
 - 时间档目前只换声音，画面还是雨夜。用户说画面交给 ChatGPT 之后调整。
 - 没做的一个小想法：按时间档自动换默认歌单（早晨咖啡馆、白天摇摆、夜晚小酒馆）。现在歌单是用户自己的偏好，不随时间档变。

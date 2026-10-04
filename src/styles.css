@@ -1264,3 +1264,33 @@ h2 {
   width: 16px;
   height: 16px;
 }
+
+.layer-paused {
+  display: grid;
+  gap: 6px;
+  border: 1px dashed rgba(247, 239, 227, 0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.layer-paused span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.layer-paused svg {
+  width: 17px;
+  height: 17px;
+  color: #efcf94;
+}
+
+.layer-paused p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}

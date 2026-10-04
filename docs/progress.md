@@ -6,7 +6,7 @@
 
 - **线上**：https://cafe.tempomyplanner.com/ ，已公开给真实用户。GitHub Pages 托管，自定义域名在 `public/CNAME`。`main` 有分支保护，只能通过 PR 合并；合并到 `main` 触发 `.github/workflows/pages.yml`，构建后强推到 `gh-pages` 分支，再由 GitHub 的 `pages build and deployment` 发布。两个加起来约一分半。
 - **音频**：Cloudflare R2 bucket `virtual-cafe-focus-room-audio`，自定义域名 https://audio.tempomyplanner.com/ ，28 个文件，对象 key 以 `audio/` 开头，全部有允许公开使用的许可（见 `docs/audio-credits.md`）。环境音分早晨、白天、夜晚三档，由用户手动选，不按时钟自动切换；规则在 `src/lib/timeSlot.js` 和 `src/audio/tracks.js`。GitHub 仓库变量 `VITE_AUDIO_BASE_URL` 指向这个域名，构建时写进代码。本地开发不设这个变量，回落到 `public/audio/`。
-- **代码结构**（2026-10-04 拆分后）：`src/App.jsx`（约 190 行）只管当前是哪个场景和访客选了什么；`src/scenes/` 每个场景一个组件（Entrance、Order、Seat、Setup、Focus、Complete）；`src/hooks/` 放状态逻辑：`useFocusSession`（倒计时、暂停、休息、快捷键、存档、集点）、`useSoundscape`（混音、时间档、音乐源、YouTube 电台、静音）、`useLanguage`；`src/components/` 放页头、混音器（`Mixer`）、电台卡片（`StationPicker`）、时间档按钮、插入事件卡片、背景图、集点卡、YouTube 播放器、滑块；`src/data/` 放饮品、座位、场景图、文案；`src/lib/` 放路径、localStorage、集点卡、音乐槽位、YouTube 工具和格式化；`src/audio/` 放音轨表和 `useAmbientAudio`。样式仍在 `src/styles.css`。React 19、Vite 8、lucide-react 图标。动画库 Motion（`src/motion/`）和画布库 PixiJS（`src/canvas/`）已装好，见 `docs/animation.md`。没有单元测试；重构用 `scripts/visual-check/` 的全流程对比验证（见工作约定），lint 用 scratchpad 里临时装的 ESLint 8 跑 `no-undef` 和 `no-unused-vars`。
+- **代码结构**（2026-10-04 拆分后）：`src/App.jsx`（约 190 行）只管当前是哪个场景和访客选了什么；`src/scenes/` 每个场景一个组件（Entrance、Order、Seat、Setup、Focus、Complete）；`src/hooks/` 放状态逻辑：`useFocusSession`（倒计时、暂停、休息、快捷键、存档、集点）、`useSoundscape`（混音、时间档、音乐源、YouTube 电台、静音）、`useLanguage`；`src/components/` 放页头、混音器（`Mixer`）、电台卡片（`StationPicker`）、时间档按钮、插入事件卡片、背景图、集点卡、YouTube 播放器、滑块；`src/data/` 放饮品、座位、场景图、文案；`src/lib/` 放路径、localStorage、集点卡、音乐槽位、YouTube 工具和格式化；`src/audio/` 放音轨表和 `useAmbientAudio`。样式拆在 `src/styles/`：`base`（颜色变量、重置、字体）、`layout`（背景、页头、场景容器）、`controls`（按钮、面板、选项卡片）、每个场景一个文件、`mixer`、`stamp-card`、`error`；`src/styles.css` 只剩按顺序的 `@import`，顺序就是层叠顺序。React 19、Vite 8、lucide-react 图标。动画库 Motion（`src/motion/`）和画布库 PixiJS（`src/canvas/`）已装好，见 `docs/animation.md`。没有单元测试；重构用 `scripts/visual-check/` 的全流程对比验证（见工作约定），lint 用 scratchpad 里临时装的 ESLint 8 跑 `no-undef` 和 `no-unused-vars`。
 - **浏览器验证方式**：`npm run build` 后 `npx vite preview --port 4173 --strictPort`，用 Playwright 或 Chrome 打开 http://localhost:4173/ 。之前的 session 用 `page.evaluate` 里按按钮文字点击的方式走完整流程，用覆盖 `Date.now` 的办法快进倒计时。
 
 ## 工作约定
@@ -60,6 +60,7 @@
 
 ### 2026-10-04
 
+- PR #16 Split styles.css。纯重构，外观不变。1296 行的 `src/styles.css` 按用途拆成 `src/styles/` 下 12 个文件，`styles.css` 保留为入口，只有 `@import`（没有删除或改名，`main.jsx` 不用动）。每条规则原样搬到它第一个选择器所属的文件；`@media` 里的规则跟着各自的组件走，在每个文件里各有一份 `@media` 块，所以构建出的 CSS 大了约 0.6 KB。规则是用脚本搬的，没有手改内容。验证分两层：一是静态检查，拆分前后 263 条「选择器加声明」一条不多一条不少，相对顺序颠倒、优先级相同且设置了同一属性的规则对有 557 对，逐对在 174 个页面状态（加上爵士开启和错误页的手写结构）里查过，没有一对能同时命中同一个元素，所以层叠结果不会变，悬停和聚焦状态也包括在内；二是 `scripts/visual-check/` 走一遍，每个元素的计算样式和 DOM 全部一致，截图只有输入框光标那几张有噪声。第一版脚本把 `@media` 里的组合规则整条放进第一个选择器的文件，静态检查查出 6 对真的会变（比如手机宽度下 `.duration-group` 的列数），改成按选择器分开后归零。
 - PR #15 Split App.jsx。纯重构，行为不变。`App.jsx` 从 1113 行减到约 190 行，拆成 `src/scenes/`（六个场景）、`src/hooks/`（`useFocusSession`、`useSoundscape`、`useLanguage`）和几个新组件（`AppHeader`、`Mixer`、`StationPicker`、`TimeSlotButtons`、`InterventionCard`）；原来写了两遍的时间档按钮合成一个组件。所有 effect 仍然在 App 这一层的 hook 里，场景组件只负责显示。`JAZZ_ENABLED` 开关和 `audioLayers` 置零逻辑原样保留（分别在 `Mixer.jsx` 和 `useSoundscape.js`）。验证：新旧两个构建各走一遍 `scripts/visual-check/walk.mjs`（6 种屏幕和语言组合，共 174 个状态），DOM、每个元素的计算样式、标签页标题、localStorage、音频请求全部一致；截图在容差内只有 4 张不同，都是 YouTube 链接输入框有光标的那一张，main 自己跑两次也是这 4 张。另外不拦截音频实际播放了一遍，各时间档播放的文件和音量一致，静音和结束后都停了。
 - PR #14 日志更新。用户建了 Cloudflare 运维 token（见工作约定）。Claude 用它清掉了 5 个已删除旧音频的边缘缓存，这 5 个地址现在返回 404，无授权的音频从线上彻底撤下；验证了 token 的七项权限；加了一条 1 美元的预算提醒。还留着的只有 git 历史里的旧文件。
 - PR #13 进度文件更新。「多个 session 并行」一节改成表格，写明三个 session 各自的工作目录；工作约定里加了 GitHub Pages 缓存和 git 撞锁两条。背景：当天 f1 和运维 session 共用主文件夹，f1 切分支时带走过运维 session 未提交的暂停爵士改动，事后核对 PR #11 合并的内容逐行无误；规则本身由 f1 在 PR #12 里写进了 `CLAUDE.md` 和 `AGENTS.md`。运维 session 从这个 PR 起也改用自己的 worktree。
@@ -154,7 +155,7 @@
 
 1. **装动画库和画布库，建基础模块**。Motion 做界面动效，PixiJS 做场景画布，用法见 `docs/animation.md`。状态：完成（见改动日志），还没有接到任何页面上。
 2. **拆 `App.jsx`**。状态：完成（PR #15，见改动日志）。
-3. **拆 `styles.css`**。按场景和组件分到 `src/styles/`，同一个选择器现在散在好几处（比如 `.session-summary`、`.duration`、`.complete-panel`），合并时用同一套截图对比确认外观不变。这是 ChatGPT 主要改的文件，拆之前先确认它没有进行中的设计分支，拆完同步更新 `AGENTS.md`。状态：待做，排在第 2 项之后。
+3. **拆 `styles.css`**。状态：完成（PR #16，见改动日志）。
 
 ### 剩余
 

@@ -181,6 +181,7 @@ export const COPY = {
       day: "Daytime",
       night: "Night",
     },
+    jazzPaused: "Off for now while we tune the playlists. The YouTube station below still plays.",
     jazzModeLabel: "Jazz mood",
     jazzModes: {
       cafe: "Cafe",
@@ -299,6 +300,7 @@ export const COPY = {
       day: "白天",
       night: "夜晚",
     },
+    jazzPaused: "正在优化，暂时关闭。下面的 YouTube 电台照常可用。",
     jazzModeLabel: "爵士氛围",
     jazzModes: {
       cafe: "咖啡馆",

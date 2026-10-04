@@ -54,6 +54,7 @@
 
 ### 2026-10-04
 
+- PR #6 音频来源表。用 `mdls -name kMDItemWhereFroms` 读出每个音频文件的下载网址，填好了 `docs/audio-credits.md`。爵士 11 首、提示音 6 个、搅拌声来自 Pixabay；后厨做咖啡来自一个在简介里声明 CC0 的 YouTube 视频；咖啡厅底噪、雨声、键盘声、两条街声是用下载工具从标准许可的 YouTube 视频里抓的，逐个打开视频页核对过，没有 Creative Commons 标记，简介里也没有允许使用的说明。没有改动任何音频文件。
 - PR #4 日志更新。Sentry 已启用：仓库变量 `VITE_SENTRY_DSN` 已设，重新部署后线上加载了上报模块，Claude 从线上页面手动发了一条测试错误（标题以 Setup test from Claude 开头，可以在 Sentry 里直接 Resolve），Sentry 返回 200。只用 Issues，没有开会话跟踪、性能监控和回放。用户已在 Sentry 打开 Prevent Storing of IP Addresses（Security & Privacy 页）并把 Allowed Domains 设为 `cafe.tempomyplanner.com`（General Settings 页的 Client Security 一节）。两项都验证过：之后的测试事件 Users 为 0；用别的 Origin 伪造的事件没有出现在 Issues 里。注意 Sentry 的接收端对任何请求都返回 200，过滤在后台做，所以不能靠 HTTP 状态码判断事件是否被收下，只能看 Issues 页面。上线运维只剩音频来源表。
 - PR #3 Error reporting and long cache headers。接入 Sentry 错误上报：`src/lib/errorReporting.js` 作为独立 chunk 懒加载（gzip 约 31 KB），没有 DSN 时完全不进包；去掉了 Breadcrumbs 和 BrowserSession 两个集成，不带用户信息，URL 去掉 query 和 hash；错误边界捕获的错误会排队，等上报模块加载后补发；`vite.config.js` 打开 source map；部署 workflow 传入 `VITE_SENTRY_DSN` 和 `VITE_APP_VERSION`（提交 sha）；隐私页加了错误报告一条。用假 DSN 指向本地抓包服务验证过：边界错误和未捕获错误各上报一次，没有面包屑和会话。另外把 rain、cafe-ambience、typing 三个对象的缓存头从 4 小时改成一年：没有重传，在用户的 Cloudflare 账号里临时部署了 Worker `cafe-audio-meta-fix` 在 R2 内部复制，三个文件的大小和 md5 与本地一致，Worker 已删除。Cloudflare 边缘缓存里的旧响应头最多 4 小时后过期。
 - PR #2 日志更新。用户完成了三项控制台操作：Cloudflare Web Analytics 的 token（第一次误填了占位文字，重设后重新部署，线上上报返回 204）；UptimeRobot 两个监控；`audio.tempomyplanner.com` 的缓存规则（m4a 街声从 DYNAMIC 变 HIT）。上线运维还剩：音频来源表（等用户给来源）、三个大音频的一年缓存头（等稳定网络）、是否接远程错误上报（等用户决定）。
@@ -96,7 +97,7 @@
 必须先处理：
 
 1. **保护 main，改成分支加 PR 的流程**。main 一推就上线，两个 AI 同时推风险太大。加 CI 构建检查、分支保护、给 ChatGPT 看的 `AGENTS.md`。状态：完成（PR #1，2026-10-04）。
-2. **确认音频和爵士乐的授权**。仓库和网站都是公开的，每个音频来源要允许公开网站使用，记在 `docs/audio-credits.md`。Claude 建好表格，来源只有用户能填。状态：等用户。
+2. **确认音频和爵士乐的授权**。Claude 在 2026-10-04 从文件的下载记录查清了全部 24 个文件的来源，写在 `docs/audio-credits.md`。19 个没问题（Pixabay 和一个 CC0）。5 个是从 YouTube 视频抓的，没有授权：`cafe-ambience.mp3`、`rain.mp3`、`typing.mp3`、`light-traffic.m4a`、`heavy-traffic.m4a`。状态：等用户决定这 5 个怎么处理（换成有授权的录音、向频道要授权、或者接受风险）。在用户决定之前不要动这些文件。注意公开仓库的 git 历史里也还有这些文件。
 3. **隐私说明**。YouTube 嵌入换成 youtube-nocookie.com；入口页加一句数据只存本地，详细说明在 `public/privacy.html`。状态：完成（PR #1）。
 
 上线后立刻需要：
@@ -116,7 +117,7 @@
 
 ### 剩余
 
-- 音频来源表 `docs/audio-credits.md` 等用户给来源。
+- 5 个从 YouTube 抓取的环境音没有授权，等用户决定怎么处理，见上线运维第 2 项和 `docs/audio-credits.md`。
 - `public/audio/` 已不在 git 里。新 clone 的机器要本地开发带声音，需要从 R2 下载一份放回 `public/audio/`（key 和路径一致），或者从 `sound-effect/` 原始录音复制。
 
 ### 之后可以考虑（不在原清单里）

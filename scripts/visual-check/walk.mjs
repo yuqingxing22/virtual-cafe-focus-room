@@ -81,7 +81,7 @@ async function run(vp, lang) {
     : { enter: "Step inside", drink: /Iced latte/, drink2: /Americano/, choose: "Choose a seat", seat: /Window seat/, seat2: /Bar seat/, sit: "Sit down", back: "Back", phone: "Put my phone away", laptop: "Open my laptop", start: "Start working", take: "Take 5 minutes", toTable: "Back to my table", ret: "Back to it", again: "Visit again", mixer: /Adjust the room sound/ };
   const blur = () => page.evaluate(() => document.activeElement?.blur());
   const openMixer = async () => {
-    if (vp.name !== "desk") await page.getByRole("button", { name: L.mixer }).click();
+    await page.locator(".mixer-toggle").click();
   };
 
   await page.goto(BASE);

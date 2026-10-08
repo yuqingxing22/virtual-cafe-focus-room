@@ -94,9 +94,14 @@ try {
   await sleep(400);
   check("Space resumes", (await btn("Pause").count()) === 1);
 
+  // The mixer is an overlay; open it from the rail first.
+  await page.locator(".mixer-toggle").click();
+  check("mixer opens from the rail", await page.locator(".mixer-body").isVisible());
   await btn("Night", page.locator(".mixer")).click();
   await sleep(2500);
   check("night: no birdsong slider", (await sliderValue("Birdsong")) === null);
+  await page.locator(".side-close").click();
+  check("mixer closes", !(await page.locator(".mixer-body").isVisible()));
 
   // A refresh must bring the session back.
   await page.reload({ waitUntil: "load" });
@@ -136,8 +141,13 @@ try {
   check("phone: mixer is a closed drawer", (await page.locator(".mixer-toggle").isVisible()) && !(await page.locator(".mixer-body").isVisible()));
   await page.locator(".mixer-toggle").click();
   check("phone: drawer opens", await page.locator(".mixer-body").isVisible());
+  await page.locator(".side-close").click();
+  // Ending takes two presses: the first arms the button.
   await btn("结束").click();
+  check("end asks once", (await text(".icon-action.end")) === "确定结束？", await text(".icon-action.end"));
+  await btn("确定结束").click();
   await sleep(400);
+  check("second press ends", (await page.locator(".complete-panel").count()) === 1);
 
   // What the page asked the network for.
   const audio = requests.filter((u) => u.includes("/audio/"));

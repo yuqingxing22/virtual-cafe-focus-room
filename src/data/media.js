@@ -77,6 +77,8 @@ export const SCENE_MEDIA = {
 
 export const getSceneMediaKey = (scene, seatId) => {
   if (scene === "focus") return `focus_${seatId ?? "corner"}`;
+  // Choosing a seat previews that seat's table.
+  if (scene === "seat" && seatId) return `focus_${seatId}`;
   if (SCENE_MEDIA[scene]) return scene;
   return "entrance";
 };

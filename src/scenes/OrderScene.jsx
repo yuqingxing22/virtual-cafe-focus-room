@@ -1,7 +1,9 @@
-import { Coffee, MessageCircle } from "lucide-react";
+import { Coffee } from "lucide-react";
 import { DRINKS } from "../data/catalog.js";
 
-// At the counter: the barista greets you and you pick a drink.
+// At the counter: the barista greets you and you pick a drink. The barista has one
+// speech bubble; its line changes once a drink is chosen. The next step is always
+// visible and only becomes active after a choice, so the panel never jumps.
 function OrderScene({ copy, lang, drink, onPickDrink, onNext }) {
   return (
     <section className="scene order-scene" aria-labelledby="order-title">
@@ -14,15 +16,18 @@ function OrderScene({ copy, lang, drink, onPickDrink, onNext }) {
           </div>
           <div>
             <p className="speaker">{copy.barista}</p>
-            <p className="quote">{copy.baristaGreeting}</p>
+            <p className="quote" aria-live="polite" key={drink ? "reply" : "hello"}>
+              {drink ? copy.baristaResponse : copy.baristaGreeting}
+            </p>
           </div>
         </div>
-        <div className="choice-grid drinks">
+        <div className="choice-grid drinks" role="group" aria-label={copy.orderEyebrow}>
           {DRINKS.map((item) => (
             <button
               className={`choice-card ${drink === item.id ? "selected" : ""}`}
               key={item.id}
               type="button"
+              aria-pressed={drink === item.id}
               onClick={() => onPickDrink(item.id)}
             >
               <Coffee aria-hidden="true" />
@@ -31,15 +36,11 @@ function OrderScene({ copy, lang, drink, onPickDrink, onNext }) {
             </button>
           ))}
         </div>
-        {drink && (
-          <div className="next-step" role="status">
-            <MessageCircle aria-hidden="true" />
-            <span>{copy.baristaResponse}</span>
-            <button className="secondary-action" type="button" onClick={onNext}>
-              {copy.chooseSeat}
-            </button>
-          </div>
-        )}
+        <div className="scene-actions end">
+          <button className="primary-action compact" type="button" disabled={!drink} onClick={onNext}>
+            {copy.chooseSeat}
+          </button>
+        </div>
       </div>
     </section>
   );

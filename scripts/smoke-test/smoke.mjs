@@ -136,7 +136,8 @@ try {
   await sleep(1800);
   check("second session completes too", (await text(".complete-panel .eyebrow")) === "Session complete", await text(".complete-panel .eyebrow"));
   await btn("Visit again").click();
-  await sleep(500);
+  // Leaving goes through the door (800 ms) and the entrance fades up.
+  await sleep(2000);
   check("returning visitor at the entrance", (await text(".eyebrow")).includes("visit 3"), await text(".eyebrow"));
 
   // Chinese copy and the phone layout.

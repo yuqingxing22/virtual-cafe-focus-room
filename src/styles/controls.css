@@ -65,6 +65,18 @@
   transform: translateY(-1px);
 }
 
+/* Press feedback: a small, quick settle. */
+.primary-action:active,
+.secondary-action:active,
+.choice-card:active,
+.icon-action:active,
+.ghost-action:active,
+.ritual-item:active,
+.duration:active {
+  transform: scale(0.98);
+  transition-duration: 80ms;
+}
+
 .primary-action svg,
 .secondary-action svg,
 .icon-action svg,

@@ -25,6 +25,12 @@
   box-sizing: border-box;
 }
 
+/* Headings wrap into balanced lines, so no lone word on the last line. */
+h1,
+h2 {
+  text-wrap: balance;
+}
+
 /* Text for screen readers only. */
 .visually-hidden {
   position: absolute;

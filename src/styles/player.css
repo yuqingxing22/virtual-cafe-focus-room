@@ -1,0 +1,178 @@
+/* Music player on the focus scene: a translucent card bottom-right, one bar when collapsed.
+   On phones it sits above the control strip and the expanded card scrolls inside itself. */
+
+.music-player {
+  position: absolute;
+  right: 68px;
+  bottom: 28px;
+  z-index: 4;
+  width: min(420px, 100%);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(18, 15, 12, 0.6);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px);
+  transition: opacity 300ms ease;
+}
+
+.player-mini {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 8px 0 12px;
+}
+
+.player-cover {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7a4b2a, #d89845);
+  color: #1c120b;
+}
+
+.player-cover svg {
+  width: 16px;
+  height: 16px;
+}
+
+.player-now {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  border: 0;
+  background: none;
+  color: var(--paper);
+  padding: 6px 0;
+  text-align: left;
+}
+
+.player-now strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.92rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-now span {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.player-button {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--paper);
+}
+
+.player-button:hover {
+  background: rgba(255, 248, 237, 0.08);
+}
+
+.player-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.player-full {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding: 12px 14px 14px;
+}
+
+.music-player .youtube-frame {
+  height: 200px;
+}
+
+/* The rail's music key shows a small beat while a station plays. */
+.rail-beat {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--amber);
+  opacity: 0;
+}
+
+.rail-beat.on {
+  opacity: 1;
+  animation: rail-beat 1s ease-in-out infinite alternate;
+}
+
+@keyframes rail-beat {
+  from {
+    width: 6px;
+  }
+
+  to {
+    width: 14px;
+  }
+}
+
+/* While the mixer overlay is open the player steps aside. */
+.focus-side.open ~ .music-player {
+  display: none;
+}
+
+body.is-quiet .music-player {
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail-beat.on {
+    animation: none;
+  }
+}
+
+@media (max-width: 980px) {
+  .music-player {
+    position: static;
+    width: min(420px, 100%);
+    margin-top: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .music-player {
+    position: fixed;
+    right: 0;
+    bottom: calc(108px + env(safe-area-inset-bottom));
+    left: 0;
+    z-index: 6;
+    width: 100%;
+    max-height: 62vh;
+    margin: 0;
+    overflow: auto;
+    border-radius: 18px 18px 0 0;
+    border-width: 1px 0 0;
+    background: var(--glass-strong);
+    backdrop-filter: none;
+  }
+
+  .focus-scene {
+    padding-bottom: calc(196px + env(safe-area-inset-bottom));
+  }
+
+  body.is-quiet .music-player {
+    opacity: 0;
+    pointer-events: none;
+  }
+}

@@ -12,14 +12,14 @@ import {
   VolumeX,
 } from "lucide-react";
 import SoundSlider from "./SoundSlider.jsx";
-import StationPicker from "./StationPicker.jsx";
 import TimeSlotButtons from "./TimeSlotButtons.jsx";
 import { JAZZ_ENABLED, JAZZ_MODES } from "../lib/music.js";
 
 // The room-sound controls on the focus scene: ambience switch, time slot, one slider per
-// layer, then the two music sources (jazz and the YouTube station, which exclude each other).
+// layer, then the music volumes (jazz and the YouTube station exclude each other; the
+// stations themselves live in MusicPlayer).
 // `sound` is the object returned by useSoundscape.
-function Mixer({ copy, lang, sound }) {
+function Mixer({ copy, sound }) {
   const { layerMix, updateLayer, timeSlot } = sound;
   return (
     <>
@@ -114,15 +114,7 @@ function Mixer({ copy, lang, sound }) {
           value={layerMix.youtube ?? 0}
           onChange={(value) => updateLayer("youtube", value)}
         />
-        {(layerMix.youtube ?? 0) > 0 && (
-          <StationPicker
-            copy={copy}
-            lang={lang}
-            youtube={sound.youtube}
-            volume={layerMix.youtube ?? 0}
-            playing={sound.enabled}
-          />
-        )}
+        <p className="station-note">{copy.musicInPlayer}</p>
       </div>
     </>
   );

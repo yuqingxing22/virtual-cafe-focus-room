@@ -51,6 +51,11 @@ function App() {
     writeStored("cafe-focus-mixer-open", mixerOpen ? "1" : "0");
   }, [mixerOpen]);
 
+  // A new scene starts at the top; the setup page can be taller than the viewport.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [scene]);
+
   const selectedDrink = DRINKS.find((item) => item.id === drink);
   const selectedSeat = SEATS.find((item) => item.id === seat);
   const sceneMediaKey = getSceneMediaKey(scene, selectedSeat?.id);

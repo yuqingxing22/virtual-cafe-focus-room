@@ -79,6 +79,17 @@
   min-width: 152px;
 }
 
+.primary-action:disabled {
+  opacity: 0.4;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.scene-actions.end {
+  justify-content: flex-end;
+}
+
 .presence-strip span,
 .session-summary span {
   border: 1px solid rgba(247, 239, 227, 0.16);
@@ -94,7 +105,7 @@
 .setup-panel,
 .complete-panel {
   align-self: center;
-  width: min(760px, 100%);
+  width: min(720px, 100%);
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--glass);
@@ -109,7 +120,7 @@
 }
 
 .wide-panel {
-  width: 100%;
+  width: min(880px, 100%);
   padding: 30px;
 }
 
@@ -137,11 +148,12 @@
 }
 
 .choice-grid.seats {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 28px;
 }
 
 .choice-card {
+  position: relative;
   display: flex;
   min-height: 132px;
   flex-direction: column;
@@ -174,6 +186,22 @@
 .choice-card.selected {
   border-color: rgba(216, 152, 69, 0.92);
   background: rgba(216, 152, 69, 0.18);
+}
+
+.choice-card.selected::after {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--amber);
+  color: #1c120b;
+  content: "✓";
+  font-size: 0.72rem;
+  font-weight: 850;
 }
 
 .secondary-action,
@@ -242,20 +270,48 @@
   .dialogue-panel,
   .wide-panel,
   .setup-panel {
-    padding: 20px;
+    padding: 20px 16px;
+  }
+
+  .choice-grid {
+    gap: 10px;
   }
 
   .choice-grid.drinks,
   .choice-grid.seats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .choice-grid.drinks .choice-card:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .choice-card {
+    min-height: 88px;
+    padding: 12px;
   }
 
   .scene-actions {
-    flex-direction: column-reverse;
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 5;
+    gap: 10px;
+    margin: 0;
+    border-top: 1px solid var(--line);
+    background: var(--glass-strong);
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    backdrop-filter: blur(14px);
   }
 
   .scene-actions > button {
-    width: 100%;
+    flex: 1;
+    min-height: 48px;
+  }
+
+  .scene-actions .primary-action {
+    flex: 2;
   }
 }
 

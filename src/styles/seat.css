@@ -1,10 +1,58 @@
-/* Seat scene: seat cards. */
+/* Seat scene: seat cards with a three-dot sound fingerprint. */
 
 .seat-card {
-  min-height: 228px;
+  min-height: 0;
 }
 
 .seat-card p {
-  margin: 6px 0 0;
+  display: -webkit-box;
+  margin: 2px 0 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.fingerprint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.fingerprint-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fingerprint-item i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(247, 239, 227, 0.22);
+}
+
+.fingerprint-item i:first-of-type {
+  margin-left: 2px;
+}
+
+.fingerprint-item i.on {
+  background: var(--amber);
+}
+
+@media (max-width: 640px) {
+  .seat-card p {
+    -webkit-line-clamp: 3;
+  }
+
+  .fingerprint {
+    gap: 2px 8px;
+    font-size: 0.7rem;
+  }
 }

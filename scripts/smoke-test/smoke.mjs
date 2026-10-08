@@ -53,20 +53,20 @@ try {
   check("privacy and feedback links", (await page.locator(".site-note a").count()) === 2);
 
   // Entrance to focus, choosing the morning slot.
-  await btn("Enter the Café").click();
+  await btn("Step inside").click();
   await sleep(2500);
   check("order scene", (await text("#order-title")).length > 0);
   check("ambience starts at the door", (await page.locator(".ambience-switch.on").count()) === 1);
   await btn("Americano").click();
   await btn("Choose a seat").click();
-  await btn("Window Seat").click();
+  await btn("Window seat").click();
   await btn("Sit down").click();
   await page.locator(".task-field input").fill("smoke test");
   check("setup has three time slots", (await page.locator(".setup-panel .time-slots button").count()) === 3);
   await btn("Morning", page.locator(".setup-panel")).click();
   await btn("Put my phone away").click();
   await btn("Open my laptop").click();
-  await btn("Start Working").click();
+  await btn("Start working").click();
   await sleep(2200);
 
   const first = await text(".timer-display");
@@ -123,9 +123,9 @@ try {
   await sleep(300);
   check("Chinese copy", /[一-鿿]/.test(await text("h1")), await text("h1"));
   await page.setViewportSize({ width: 390, height: 844 });
-  await btn("推门进入").click();
+  await btn("推门进去").click();
   await btn("美式").click();
-  await btn("去选座位").click();
+  await btn("去挑座位").click();
   await btn("吧台").click();
   await btn("坐下来").click();
   await page.locator(".task-field input").fill("手机");

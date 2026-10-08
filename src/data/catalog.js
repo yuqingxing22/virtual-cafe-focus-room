@@ -3,18 +3,18 @@ import { Armchair, BookOpen, Coffee, Laptop } from "lucide-react";
 export const DRINKS = [
   {
     id: "iced-latte",
-    name: { en: "Iced Latte", zh: "冰拿铁" },
-    note: { en: "cool, steady, familiar", zh: "凉一点，稳定熟悉" },
+    name: { en: "Iced latte", zh: "冰拿铁" },
+    note: { en: "cool and steady", zh: "凉一点，稳稳的" },
   },
   {
     id: "americano",
-    name: { en: "Americano", zh: "美式咖啡" },
+    name: { en: "Americano", zh: "美式" },
     note: { en: "clear and direct", zh: "清醒、直接" },
   },
   {
     id: "matcha",
-    name: { en: "Matcha Latte", zh: "抹茶拿铁" },
-    note: { en: "soft energy", zh: "柔和的能量" },
+    name: { en: "Matcha latte", zh: "抹茶拿铁" },
+    note: { en: "soft energy", zh: "柔和的劲" },
   },
   {
     id: "cappuccino",
@@ -23,7 +23,7 @@ export const DRINKS = [
   },
   {
     id: "water",
-    name: { en: "Water", zh: "今天只喝水" },
+    name: { en: "Just water", zh: "今天只喝水" },
     note: { en: "simple and light", zh: "简单、轻一点" },
   },
 ];
@@ -31,11 +31,11 @@ export const DRINKS = [
 export const SEATS = [
   {
     id: "window",
-    name: { en: "Window Seat", zh: "窗边座位" },
-    label: { en: "Reading / writing", zh: "阅读 / 写作" },
+    name: { en: "Window seat", zh: "窗边座位" },
+    label: { en: "Reading and writing", zh: "读书、写东西" },
     description: {
-      en: "Rain at the glass, soft street movement, lighter voices.",
-      zh: "窗外有雨声和街景，人声更轻，适合慢慢进入状态。",
+      en: "Rain on the glass, the street outside, voices kept low. Good for easing in.",
+      zh: "窗外有雨和街景，人声更轻，适合慢慢进入状态。",
     },
     icon: BookOpen,
     layers: {
@@ -51,11 +51,11 @@ export const SEATS = [
   },
   {
     id: "corner",
-    name: { en: "Corner Table", zh: "角落小桌" },
+    name: { en: "Corner table", zh: "角落小桌" },
     label: { en: "Deep work", zh: "深度工作" },
     description: {
-      en: "A quieter table with low café hum and fewer interruptions.",
-      zh: "偏安静的位置，咖啡厅背景声低一点，不容易被打断。",
+      en: "Tucked away. The café hum stays low and nothing interrupts.",
+      zh: "靠里的位子，店里的声音低一些，不容易被打断。",
     },
     icon: Armchair,
     layers: {
@@ -71,11 +71,11 @@ export const SEATS = [
   },
   {
     id: "bar",
-    name: { en: "Bar Seat", zh: "吧台座位" },
+    name: { en: "Bar seat", zh: "吧台座位" },
     label: { en: "Short tasks", zh: "短任务" },
     description: {
-      en: "More cup sounds, nearby footsteps, and light motion.",
-      zh: "杯子声和脚步声更明显，适合处理短任务或快速开始。",
+      en: "Cups and footsteps close by. Good for quick starts and small jobs.",
+      zh: "杯子声和脚步声更近，适合快速开始、处理小事。",
     },
     icon: Coffee,
     layers: {
@@ -91,11 +91,11 @@ export const SEATS = [
   },
   {
     id: "quiet",
-    name: { en: "Quiet Zone", zh: "安静区" },
-    label: { en: "Exam review", zh: "复习 / 高强度专注" },
+    name: { en: "Quiet zone", zh: "安静区" },
+    label: { en: "Exam prep", zh: "复习、高强度专注" },
     description: {
-      en: "Muted room tone, almost no chatter, a steady focus bed.",
-      zh: "人声很少，白噪音更稳定，适合考试复习或高强度专注。",
+      en: "Almost no voices, a steady hum. For revision and anything that takes everything you have.",
+      zh: "几乎没有人声，底噪很稳，适合复习和需要全力的事。",
     },
     icon: Laptop,
     layers: {

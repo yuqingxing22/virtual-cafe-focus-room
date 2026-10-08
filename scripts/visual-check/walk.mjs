@@ -77,8 +77,8 @@ async function run(vp, lang) {
   };
   const click = (name) => page.getByRole("button", { name, exact: true }).first().click();
   const L = lang === "zh"
-    ? { enter: "推门进入", drink: /冰拿铁/, drink2: /美式咖啡/, choose: "去选座位", seat: /窗边座位/, seat2: /吧台座位/, sit: "坐下来", back: "返回", phone: "把手机放远一点", laptop: "打开电脑", start: "开始专注", take: "休息 5 分钟", toTable: "回到座位", ret: "回到任务", again: "下次再来", mixer: /调整环境音/ }
-    : { enter: "Enter the Café", drink: /Iced Latte/, drink2: /Americano/, choose: "Choose a seat", seat: /Window Seat/, seat2: /Bar Seat/, sit: "Sit down", back: "Back", phone: "Put my phone away", laptop: "Open my laptop", start: "Start Working", take: "Take a 5-minute break", toTable: "Back to my table", ret: "Return to task", again: "Visit again", mixer: /Adjust the room sound/ };
+    ? { enter: "推门进去", drink: /冰拿铁/, drink2: /美式/, choose: "去挑座位", seat: /窗边座位/, seat2: /吧台座位/, sit: "坐下来", back: "返回", phone: "把手机放远一点", laptop: "打开电脑", start: "开始专注", take: "休息 5 分钟", toTable: "回到座位", ret: "回到任务", again: "再来一次", mixer: /调整环境音/ }
+    : { enter: "Step inside", drink: /Iced latte/, drink2: /Americano/, choose: "Choose a seat", seat: /Window seat/, seat2: /Bar seat/, sit: "Sit down", back: "Back", phone: "Put my phone away", laptop: "Open my laptop", start: "Start working", take: "Take 5 minutes", toTable: "Back to my table", ret: "Back to it", again: "Visit again", mixer: /Adjust the room sound/ };
   const blur = () => page.evaluate(() => document.activeElement?.blur());
   const openMixer = async () => {
     if (vp.name !== "desk") await page.getByRole("button", { name: L.mixer }).click();

@@ -248,6 +248,7 @@ export function useFocusSession({ restored, scene, setScene, plan, sound }) {
   useEffect(() => {
     if (scene !== "focus") return undefined;
     const onKeyDown = (event) => {
+      if (event.defaultPrevented) return;
       const target = event.target;
       if (
         target instanceof HTMLElement &&

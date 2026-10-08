@@ -10,6 +10,7 @@ import { useLanguage } from "./hooks/useLanguage.js";
 import { useSoundscape } from "./hooks/useSoundscape.js";
 import { formatTime } from "./lib/format.js";
 import { readSavedSession } from "./lib/session.js";
+import { readStored, writeStored } from "./lib/storage.js";
 import CompleteScene from "./scenes/CompleteScene.jsx";
 import EntranceScene from "./scenes/EntranceScene.jsx";
 import FocusScene from "./scenes/FocusScene.jsx";
@@ -37,8 +38,13 @@ function App() {
   const [ritual, setRitual] = useState(
     restored ? { phone: true, laptop: true } : { phone: false, laptop: false },
   );
-  // On narrow screens the mixer is a drawer under the timer; wide screens always show it.
-  const [mixerOpen, setMixerOpen] = useState(false);
+  // The mixer is an overlay on the focus scene (a bottom sheet on phones); remembered per device.
+  const [mixerOpen, setMixerOpen] = useState(
+    () => readStored("cafe-focus-mixer-open", "0", (value) => value === "0" || value === "1") === "1",
+  );
+  useEffect(() => {
+    writeStored("cafe-focus-mixer-open", mixerOpen ? "1" : "0");
+  }, [mixerOpen]);
 
   const selectedDrink = DRINKS.find((item) => item.id === drink);
   const selectedSeat = SEATS.find((item) => item.id === seat);
@@ -152,7 +158,7 @@ function App() {
             session={session}
             sound={sound}
             mixerOpen={mixerOpen}
-            onToggleMixer={() => setMixerOpen((open) => !open)}
+            onToggleMixer={(next) => setMixerOpen((open) => (typeof next === "boolean" ? next : !open))}
           />
         );
       default:

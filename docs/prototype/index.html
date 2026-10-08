@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>咖啡厅交互原型</title>
+<meta name="description" content="按 HCI 设计稿做的可点击原型：入口、点单、选座、设定、专注、完成六页，桌面和手机布局，中英文。">
+<style>
+:root {
+  color-scheme: dark;
+  --cream: #f7efe3; --paper: #fff8ed; --muted: #d8c8b5; --ink: #181614;
+  --amber: #d89845; --sage: #496b56; --pine: #203c31; --clay: #9a5f43; --espresso: #211812;
+  --glass: rgba(22, 18, 14, 0.56); --glass-strong: rgba(18, 15, 12, 0.75);
+  --line: rgba(247, 239, 227, 0.18); --shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+  --ease: cubic-bezier(.2,.7,.2,1);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --cream: #f7efe3; --espresso: #211812; } }
+:root[data-theme="dark"] { --cream: #f7efe3; --espresso: #211812; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; min-height: 100%; overflow-x: hidden; }
+body { background: var(--espresso); color: var(--cream); font: 16px/1.5 -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Segoe UI", sans-serif; overflow-x: hidden; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+/* backdrop: two image layers that crossfade, plus a dimmer used by the door transition */
+.backdrop { position: fixed; inset: 0; z-index: 0; background: var(--espresso); overflow: hidden; }
+.backdrop img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: translateZ(0); will-change: opacity, transform; transition: opacity .8s var(--ease), transform .9s var(--ease); }
+.backdrop img.on { opacity: 1; }
+.backdrop.door img.on { transform: scale(1.06) translateZ(0); }
+.dim { position: fixed; inset: 0; z-index: 1; background: #0a0806; opacity: 0; pointer-events: none; transition: opacity .7s var(--ease); }
+.backdrop.door ~ .dim { opacity: .75; }
+.shade { position: fixed; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(10,8,6,.35), rgba(10,8,6,.55)); pointer-events: none; }
+
+/* header */
+.top { position: fixed; top: 0; left: 0; right: 0; z-index: 20; height: 56px; display: flex; align-items: center; gap: 16px; padding: 0 20px; transition: opacity .3s; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; white-space: nowrap; }
+.brand .cup { width: 22px; height: 22px; border-radius: 6px; background: var(--amber); display: inline-block; }
+.progress { margin-left: auto; display: flex; flex-direction: column; gap: 3px; width: 220px; }
+.progress .segs { display: flex; gap: 4px; }
+.progress .seg { flex: 1; height: 5px; border-radius: 3px; background: rgba(247,239,227,.22); }
+.progress .seg.done { background: rgba(216,152,69,.55); }
+.progress .seg.now { background: var(--amber); }
+.progress .label { font-size: 12px; color: var(--muted); text-align: right; }
+.icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--glass); display: grid; place-items: center; font-size: 15px; }
+.icon-btn[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
+.lang { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--glass); }
+.lang button { padding: 0 10px; height: 36px; font-size: 13px; font-weight: 600; }
+.lang button[aria-pressed="true"] { background: var(--amber); color: var(--ink); }
+
+/* layout */
+main { position: relative; z-index: 2; min-height: 100vh; padding: 72px 20px 24px; }
+.hero { padding-left: 20px; }
+.scene { min-height: calc(100vh - 96px); display: flex; align-items: center; }
+.panel { background: var(--glass-strong); border: 1px solid var(--line); border-radius: 20px; padding: 28px 32px; box-shadow: var(--shadow); backdrop-filter: blur(12px); }
+.panel.m { width: min(720px, 100%); }
+.panel.l { width: min(880px, 100%); }
+.eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--amber); text-transform: uppercase; }
+h1 { margin: 0 0 12px; font-size: clamp(34px, 5vw, 64px); line-height: 1.05; font-weight: 800; }
+h2 { margin: 0 0 16px; font-size: clamp(24px, 3vw, 36px); line-height: 1.15; font-weight: 800; }
+.lede { max-width: 48ch; margin: 0 0 10px; color: var(--cream); font-size: 17px; }
+.presence { margin: 0 0 22px; color: var(--muted); font-size: 14px; }
+.note { margin: 16px 0 0; font-size: 13px; color: var(--muted); }
+.note a { color: var(--amber); }
+.actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 22px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; height: 44px; padding: 0 20px; border-radius: 12px; font-weight: 700; border: 1px solid transparent; transition: transform .12s, opacity .2s; }
+.btn:active { transform: scale(.97); }
+.btn.primary { background: var(--amber); color: var(--ink); }
+.btn.primary[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
+.btn.secondary { border-color: var(--line); background: rgba(247,239,227,.06); }
+.btn.ghost { color: var(--muted); }
+.btn.ghost:hover { color: var(--cream); }
+.btn.danger-armed { border-color: var(--amber); color: var(--amber); }
+
+/* cards */
+.grid { display: grid; gap: 12px; }
+.grid.five { grid-template-columns: repeat(5, minmax(0,1fr)); }
+.grid.two { grid-template-columns: repeat(2, minmax(0,1fr)); }
+.card { position: relative; min-width: 0; overflow: hidden; text-align: left; border: 1px solid var(--line); border-radius: 14px; background: rgba(247,239,227,.05); padding: 14px 14px 12px; min-height: 112px; display: flex; flex-direction: column; gap: 4px; transition: border-color .2s, background .2s, transform .12s; }
+.card:hover { background: rgba(247,239,227,.09); }
+.card:active { transform: scale(.98); }
+.card[aria-checked="true"] { border-color: var(--amber); background: rgba(216,152,69,.14); }
+.card .tick { position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; border-radius: 50%; background: var(--amber); color: var(--ink); font-size: 12px; display: none; place-items: center; font-weight: 800; }
+.card[aria-checked="true"] .tick { display: grid; }
+.card .ic { font-size: 18px; }
+.card .name { font-weight: 700; }
+.card .sub { font-size: 13px; color: var(--muted); }
+.card .desc { font-size: 13px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fp { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 6px; font-size: 12px; color: var(--muted); }
+.fp span { display: inline-flex; align-items: center; gap: 4px; }
+.fp i { width: 7px; height: 7px; border-radius: 50%; background: rgba(247,239,227,.22); display: inline-block; }
+.fp i.on { background: var(--amber); }
+
+.bubble { display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--line); border-radius: 14px; background: rgba(247,239,227,.05); padding: 12px 14px; margin-bottom: 16px; min-height: 64px; }
+.bubble .av { width: 40px; height: 40px; border-radius: 50%; background: rgba(216,152,69,.2); display: grid; place-items: center; flex: none; }
+.bubble .who { font-size: 12px; color: var(--amber); font-weight: 700; }
+.bubble .say { transition: opacity .32s; }
+
+/* setup */
+.receipt { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.receipt a { color: var(--amber); text-decoration: none; }
+.field { margin-top: 16px; }
+.field label, .field .lab { display: block; font-size: 13px; font-weight: 700; color: var(--amber); margin-bottom: 8px; }
+.field .lab small { color: var(--muted); font-weight: 400; margin-left: 6px; }
+.text { width: 100%; height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); padding: 0 14px; }
+.seg { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.seg button { height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: rgba(247,239,227,.05); font-weight: 700; }
+.seg button[aria-checked="true"] { background: var(--sage); border-color: var(--sage); color: #fff; }
+.seg .custom { display: inline-flex; align-items: center; gap: 6px; }
+.seg .custom input { width: 84px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); padding: 0 10px; text-align: center; }
+.hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; min-height: 18px; }
+.hint.bad { color: #f0a6a6; }
+.ritual { height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: rgba(247,239,227,.05); font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }
+.ritual[aria-pressed="true"] { background: var(--sage); border-color: var(--sage); color: #fff; }
+
+/* focus */
+.focus { position: relative; min-height: calc(100vh - 96px); }
+.timer-card { position: fixed; left: 20px; bottom: 24px; z-index: 10; width: min(420px, calc(100vw - 40px)); background: var(--glass); backdrop-filter: blur(14px); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; box-shadow: var(--shadow); transition: opacity .3s; }
+.timer-card .task { font-weight: 800; font-size: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.timer-card .time { font-size: 56px; font-weight: 850; line-height: 1; font-variant-numeric: tabular-nums; color: var(--paper); }
+.timer-card .time.paused { color: var(--muted); }
+.timer-card .time.break { color: #cfe3c4; }
+.timer-card .pstate { font-size: 12px; color: var(--muted); margin-left: 8px; }
+.timer-card .status { margin: 8px 0 12px; color: var(--muted); font-size: 14px; min-height: 20px; }
+.timer-card .ctl { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.timer-card .hint-k { font-size: 12px; color: var(--muted); flex-basis: 100%; display: none; }
+@media (hover: hover) and (pointer: fine) { .timer-card .hint-k { display: block; } }
+.rail { position: fixed; right: 16px; top: 50%; transform: translateY(-50%); z-index: 10; display: flex; flex-direction: column; gap: 8px; padding: 8px; border-radius: 16px; background: var(--glass); backdrop-filter: blur(14px); border: 1px solid var(--line); transition: opacity .3s, transform .3s; }
+.rail .icon-btn { width: 40px; height: 40px; border: 0; background: none; position: relative; }
+.rail .icon-btn[aria-pressed="true"] { color: var(--amber); }
+.rail .beat { position: absolute; right: 4px; bottom: 4px; width: 14px; height: 4px; border-radius: 2px; background: var(--amber); opacity: 0; }
+.rail .beat.on { opacity: 1; animation: beat 1s infinite alternate; }
+@keyframes beat { from { width: 6px; } to { width: 14px; } }
+.overlay { position: fixed; top: 72px; right: 72px; bottom: 24px; z-index: 12; width: 320px; background: var(--glass-strong); backdrop-filter: blur(16px); border: 1px solid var(--line); border-radius: 18px; padding: 16px; overflow: auto; transform: translateX(24px); opacity: 0; pointer-events: none; transition: opacity .32s var(--ease), transform .32s var(--ease); }
+.overlay.open { transform: none; opacity: 1; pointer-events: auto; }
+.overlay h3 { margin: 0 0 12px; font-size: 14px; color: var(--amber); display: flex; justify-content: space-between; align-items: center; }
+.switch { width: 100%; height: 44px; border-radius: 12px; border: 1px solid var(--line); font-weight: 700; background: rgba(247,239,227,.05); margin-bottom: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.switch[aria-pressed="true"] { background: var(--sage); border-color: var(--sage); color: #fff; }
+.slots { display: flex; gap: 6px; margin-bottom: 14px; }
+.slots button { flex: 1; height: 40px; border-radius: 10px; border: 1px solid var(--line); font-size: 13px; font-weight: 700; }
+.slots button[aria-checked="true"] { border-color: var(--amber); color: var(--amber); }
+.sl { margin-bottom: 10px; }
+.sl .lab { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.sl .lab span:last-child { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.sl input[type=range] { width: 100%; height: 24px; accent-color: var(--amber); margin: 0; }
+.overlay .music-note { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+.card-int { position: fixed; left: 460px; bottom: 24px; z-index: 11; width: 320px; background: var(--glass-strong); backdrop-filter: blur(14px); border: 1px solid var(--amber); border-radius: 16px; padding: 14px 16px; box-shadow: var(--shadow); }
+.card-int .who { font-size: 12px; color: var(--amber); font-weight: 700; }
+.card-int .line { font-weight: 700; margin: 2px 0 4px; }
+.card-int .thought { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+.card-int .ctl { display: flex; gap: 10px; }
+.player { position: fixed; right: 72px; bottom: 24px; z-index: 11; width: min(420px, calc(100vw - 32px)); background: var(--glass); backdrop-filter: blur(16px); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; transition: opacity .3s; }
+.player .mini { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 12px; }
+.player .mini .cov { width: 28px; height: 28px; border-radius: 7px; flex: none; }
+.player .mini .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 600; text-align: left; padding: 0; }
+.player .mini .icon-btn { width: 32px; height: 32px; border: 0; background: none; }
+.player .full { display: none; padding: 12px 14px 14px; border-top: 1px solid var(--line); }
+.player.open .full { display: block; }
+.player .src { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 10px; scrollbar-width: none; }
+.player .src button { flex: none; height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); font-size: 12px; font-weight: 700; }
+.player .src button[aria-checked="true"] { border-color: var(--amber); color: var(--amber); }
+.player .src .yt { margin-left: auto; border-style: dashed; }
+.player .now { display: flex; gap: 12px; align-items: center; }
+.player .cov.big { width: 56px; height: 56px; border-radius: 12px; flex: none; }
+.player .title { font-weight: 800; }
+.player .artist { font-size: 13px; color: var(--muted); }
+.player .prog { height: 3px; background: rgba(247,239,227,.18); border-radius: 2px; margin: 10px 0 4px; overflow: hidden; }
+.player .prog i { display: block; height: 100%; width: 0; background: var(--amber); }
+.player .times { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+.player .ctl { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.player .ctl .icon-btn { width: 40px; height: 40px; border: 0; background: rgba(247,239,227,.06); }
+.player .ctl .vol { margin-left: auto; display: flex; align-items: center; gap: 6px; width: 140px; }
+.player .ctl .vol input { width: 100%; height: 24px; accent-color: var(--amber); margin: 0; }
+.player .fail { font-size: 12px; color: #f0c9a6; min-height: 16px; }
+body.quiet .top, body.quiet .rail { opacity: 0; pointer-events: none; }
+body.quiet .timer-card, body.quiet .player { opacity: .6; }
+.demo { position: fixed; left: 20px; top: 64px; z-index: 30; }
+.demo summary { list-style: none; cursor: pointer; font-size: 12px; color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 4px 10px; background: var(--glass); }
+.demo .menu { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; background: var(--glass-strong); border: 1px solid var(--line); border-radius: 12px; padding: 8px; }
+.demo .menu button { text-align: left; font-size: 13px; padding: 6px 8px; border-radius: 8px; }
+.demo .menu button:hover { background: rgba(247,239,227,.08); }
+
+/* complete */
+.complete .panel { margin: 0 auto; }
+.stamp-card { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; background: rgba(247,239,227,.04); margin: 16px 0; }
+.stamp-card .h { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--amber); letter-spacing: .06em; }
+.stamps { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+.stamps i { width: 30px; height: 30px; border-radius: 50%; border: 1px dashed var(--line); display: grid; place-items: center; font-size: 13px; }
+.stamps i.filled { border: 0; background: var(--amber); color: var(--ink); }
+.stamps i.new { animation: pop .5s var(--ease) both; animation-delay: .4s; opacity: 0; }
+@keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.stat { font-size: 14px; color: var(--muted); }
+
+/* door hotspot */
+.door { position: fixed; z-index: 3; left: 52%; top: 26%; width: 22%; height: 58%; border-radius: 10px; cursor: pointer; transition: box-shadow .3s, background .3s; }
+.door:hover, .door:focus-visible { box-shadow: 0 0 0 2px rgba(216,152,69,.6), 0 0 60px rgba(216,152,69,.35); background: rgba(216,152,69,.08); }
+
+/* phone bars */
+.bar { display: none; }
+.sheet-handle { display: none; }
+.toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 40; background: var(--glass-strong); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
+.toast.on { opacity: 1; }
+
+@media (max-width: 980px) {
+  .card-int { left: 20px; bottom: 120px; width: calc(100vw - 40px); }
+  .player { right: 16px; bottom: 16px; }
+  .overlay { right: 16px; width: min(360px, calc(100vw - 32px)); }
+}
+@media (max-width: 640px) {
+  .top { height: 52px; padding: 0 12px; gap: 10px; }
+  .brand span.t { display: none; }
+  .progress { width: auto; flex: 1; }
+  main { padding: 64px 16px 120px; }
+  .hero { padding-left: 0; }
+  .scene { min-height: auto; align-items: flex-start; }
+  .scene.focus { display: block; }
+  .toast { bottom: calc(140px + env(safe-area-inset-bottom)); }
+  .panel { padding: 20px 16px; border-radius: 16px; }
+  .grid.five { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .grid.five .card:last-child { grid-column: 1 / -1; }
+  .card { min-height: 88px; }
+  .grid.two .card { min-height: 0; }
+  .card .desc { -webkit-line-clamp: 3; }
+  .fp { font-size: 11px; gap: 2px 8px; }
+  .actions { display: none; }
+  .bar { display: flex; justify-content: space-between; gap: 10px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: var(--glass-strong); backdrop-filter: blur(14px); border-top: 1px solid var(--line); }
+  .bar .btn { height: 48px; }
+  .bar { flex-wrap: wrap; }
+  .bar .btn { flex: 1; justify-content: center; }
+  .bar .btn.primary { flex-basis: 100%; order: -1; }
+  h1 { font-size: 36px; }
+  .hero .btn.primary { width: 100%; justify-content: center; }
+  .door { display: none; }
+  .timer-card { position: static; width: 100%; margin-top: 8px; }
+  .timer-card .time { font-size: 64px; }
+  .rail { display: none; }
+  .card-int { position: static; width: 100%; margin-top: 12px; }
+  .sheet-handle { display: flex; position: fixed; left: 0; right: 0; bottom: calc(68px + env(safe-area-inset-bottom)); z-index: 24; justify-content: center; align-items: center; gap: 8px; height: 40px; background: var(--glass-strong); border-top: 1px solid var(--line); font-size: 13px; font-weight: 700; }
+  .sheet-handle::before { content: ""; width: 36px; height: 4px; border-radius: 2px; background: var(--muted); }
+  .overlay { top: auto; right: 0; left: 0; bottom: calc(108px + env(safe-area-inset-bottom)); width: 100%; height: auto; max-height: 70vh; border-radius: 18px 18px 0 0; transform: translateY(24px); }
+  .overlay.open { transform: none; }
+  .overlay.open ~ .player { display: none; }
+  .demo { position: static; display: inline-block; margin-bottom: 8px; }
+  .player { right: 0; left: 0; bottom: calc(108px + env(safe-area-inset-bottom)); width: 100%; border-radius: 0; border-left: 0; border-right: 0; }
+  body.quiet .bar, body.quiet .sheet-handle { opacity: 0; pointer-events: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
+  .backdrop.door img.on { transform: none; }
+}
+</style>
+</head>
+<body>
+<div class="backdrop" id="backdrop"><img id="bgA" alt=""><img id="bgB" alt=""></div>
+<div class="dim" aria-hidden="true"></div>
+<div class="shade" aria-hidden="true"></div>
+
+<header class="top" id="top">
+  <div class="brand"><span class="cup" aria-hidden="true"></span><span class="t">Virtual Café Focus Room</span></div>
+  <nav class="progress" aria-label="progress" id="progress"></nav>
+  <button class="icon-btn" id="mute" aria-pressed="true" hidden></button>
+  <div class="lang" role="group" aria-label="Language" id="langBox"><button data-l="en" aria-pressed="false">EN</button><button data-l="zh" aria-pressed="true">中文</button></div>
+</header>
+
+<main id="main"></main>
+<div class="bar" id="bar"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const SPK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>';
+const IMG = {
+  entrance: "../../public/assets/scenes/entrance/01.webp", order: "../../public/assets/scenes/order/01.webp", seat: "../../public/assets/scenes/seat-selection/01.webp", setup: "../../public/assets/scenes/setup/01.webp",
+  window: "../../public/assets/scenes/focus-window/01.webp", corner: "../../public/assets/scenes/focus-corner/01.webp", bar: "../../public/assets/scenes/focus-bar/01.webp", quiet: "../../public/assets/scenes/focus-quiet/01.webp", complete: "../../public/assets/scenes/complete/01.webp",
+};
+// Warm the browser cache so scene changes never wait for an image.
+Object.values(IMG).forEach((src) => { const i = new Image(); i.src = src; });
+
+/* ---------- copy, both languages ---------- */
+const COPY = {
+  zh: {
+    steps: ["入口", "点单", "选座", "设定", "专注"],
+    stepLabel: (i, n) => `${i} / 5 ${n}`,
+    mute: "环境音开关",
+    entrance: { eyebrow: "出门，去咖啡馆", visit: (n) => `第 ${n} 次来`, title: "你的座位在等你。", lede: "换个地方做事。点一杯，挑个位子，让这间店陪你专注一会儿。", presence: "门铃 · 低低的交谈声 · 杯子放到木桌上", enter: "推门进去", note: "你的记录只留在这个浏览器里", privacy: "隐私", feedback: "反馈", door: "推门进去", cue: "脚步 → 木门 → 门铃（0 / 450 / 800 毫秒）" },
+    order: { eyebrow: "在吧台", title: "先点一杯，算是真的到了。", barista: "咖啡师", hello: "欢迎。今天想喝点什么？", reply: "好，去找个位子坐，我给你端过去。", next: "去挑座位", cue: (d) => `放了「${d}」的声音` },
+    drinks: { "iced-latte": ["冰拿铁", "凉一点，稳稳的"], americano: ["美式", "清醒、直接"], matcha: ["抹茶拿铁", "柔和的劲"], cappuccino: ["卡布奇诺", "温热、经典"], water: ["今天只喝水", "简单、轻一点"] },
+    seat: { eyebrow: "找座位", title: "今天想要哪一种安静？", back: "返回", next: "坐下来", fp: ["人声", "雨", "街"], cue: (s) => `环境音切到「${s}」` },
+    seats: { window: ["窗边座位", "读书、写东西", "窗外有雨和街景，人声更轻，适合慢慢进入状态。"], corner: ["角落小桌", "深度工作", "靠里的位子，店里的声音低一些，不容易被打断。"], bar: ["吧台座位", "短任务", "杯子声和脚步声更近，适合快速开始、处理小事。"], quiet: ["安静区", "复习、高强度专注", "几乎没有人声，底噪很稳，适合复习和需要全力的事。"] },
+    setup: { change: "改", min: "分钟", title: "今天来这里做什么？", task: "任务", placeholder: "写一句就行，比如：写引言", taskHint: "写一句就行", howLong: "多久", custom: "自定义", durHint: "5 到 180 分钟", when: "什么时候", whenNote: "只影响声音，不换画面", before: "坐下之前", optional: "可选", phone: "把手机放远一点", laptop: "打开电脑", back: "返回", start: "开始专注", phoneCue: "手机滑出画面，放了一声", laptopCue: "电脑打开的声音" },
+    slots: { morning: "早晨", day: "白天", night: "夜晚" },
+    focus: {
+      status: ["旁边有人在轻轻敲键盘。", "咖啡师把你的那杯轻轻放到桌上。", "窗边的学生翻了一页书。", "店里很安静。留在你手上的事里。", "周围的人也慢慢进入状态了。", "座位还在。先回到一个很小的步骤。"],
+      pause: "暂停", resume: "继续", end: "结束", comeBack: "回来", armed: "确定结束？", paused: "已暂停", mainPaused: (t) => `主计时 ${t} 已暂停`,
+      keys: "Space 暂停 · Esc 结束 · M 静音", roomSound: "环境音", on: "环境音开着", off: "环境音关了", slot: "切换时间档", mixer: "调整环境音", music: "音乐播放器", close: "关闭",
+      layers: ["咖啡厅人声", "雨", "街道", "鸟叫", "敲键盘", "杯子和搅拌", "后厨"],
+      musicNote: "音乐在右下角的播放器里。爵士电台和 YouTube 电台只能开一个。",
+      slotCue: (s) => `时间档：${s}（只换声音）`, restored: "座位一直给你留着。", breakStatus: (t) => `歇一会儿。五分钟后带你回到「${t}」。`, breakOver: "杯子放回桌上。继续。", cupCue: "杯子落桌的声音", fadeCue: "音乐 2 秒内淡出",
+      breakReady: { who: "咖啡师", line: "要不要先歇五分钟？", thought: "已经专注了 25 分钟。休息的时候主计时会停。", a: "休息 5 分钟", b: "继续" },
+      pauseLong: { who: "窗边的学生", line: "座位还在。", thought: (t) => `先回到「${t}」里一个很小的步骤。`, a: "回到任务", b: "再等等" },
+      demo: { title: "演示", items: ["显示休息提议（25 分钟后）", "显示暂停提醒（暂停 90 秒后）", "显示刷新恢复的提示", "快进 25 分钟", "快进到结束", "立刻退后（平时 20 秒无操作）"] },
+    },
+    player: { source: "来源", yt: "YouTube 电台", prev: "上一首", play: "播放或暂停", next: "下一首", vol: "音乐音量", ytTitle: "Jazz piano（YouTube 电台）", ytArtist: "爵士已停，进度由 YouTube 管", ytMini: "YouTube 电台 · Jazz piano" },
+    stations: ["钢琴角落", "慢萨克斯", "鸡尾酒时间", "Lo-fi 爵士", "吉他露台", "摇摆时光"],
+    complete: { done: "专注完成", early: "提前结束", doneTitle: (t, m) => `你陪着「${t}」坐了 ${m} 分钟。`, earlyTitle: (t) => `你和「${t}」待了一会儿。这也算数。`, card: "集点卡 · 第 1 张", stat: (n, m) => `${n} 次 · 共专注 ${m} 分钟 · 又盖了一个章`, again: "再来一次", more: (m) => `再坐 ${m} 分钟`, stampCue: "新章盖上去，配杯子落桌的声音", moreCue: (m) => `同一张桌子，再坐 ${m} 分钟`, leaveCue: "起身离开：画面变暗，门铃" },
+  },
+  en: {
+    steps: ["Door", "Order", "Seat", "Setup", "Focus"],
+    stepLabel: (i, n) => `${i} / 5 ${n}`,
+    mute: "Room sound on or off",
+    entrance: { eyebrow: "Café mode", visit: (n) => `Visit ${n}`, title: "Your table is waiting.", lede: "Leave home mode behind. Order something, pick a seat, and let the room keep you company while you work.", presence: "the door bell · low voices · cups set down on wood", enter: "Step inside", note: "Everything stays in this browser", privacy: "Privacy", feedback: "Feedback", door: "Step inside", cue: "footsteps → wooden door → bell (0 / 450 / 800 ms)" },
+    order: { eyebrow: "At the counter", title: "Order something. That's how you arrive.", barista: "Barista", hello: "Hi, welcome in. What can I get you?", reply: "Got it. Grab a seat and I'll bring it over.", next: "Choose a seat", cue: (d) => `Played the “${d}” sound` },
+    drinks: { "iced-latte": ["Iced latte", "cool and steady"], americano: ["Americano", "clear and direct"], matcha: ["Matcha latte", "soft energy"], cappuccino: ["Cappuccino", "warm and classic"], water: ["Just water", "simple and light"] },
+    seat: { eyebrow: "Find your table", title: "What kind of quiet do you need today?", back: "Back", next: "Sit down", fp: ["voices", "rain", "street"], cue: (s) => `Room sound set to “${s}”` },
+    seats: { window: ["Window seat", "Reading and writing", "Rain on the glass, the street outside, voices kept low. Good for easing in."], corner: ["Corner table", "Deep work", "Tucked away. The café hum stays low and nothing interrupts."], bar: ["Bar seat", "Short tasks", "Cups and footsteps close by. Good for quick starts and small jobs."], quiet: ["Quiet zone", "Exam prep", "Almost no voices, a steady hum. For revision and anything that takes everything you have."] },
+    setup: { change: "Change", min: "min", title: "What are you here to work on?", task: "Task", placeholder: "One line is enough, like: write the intro", taskHint: "Just one line", howLong: "How long", custom: "Custom", durHint: "Between 5 and 180 minutes", when: "Time of day", whenNote: "changes the sound only", before: "Before you sit down", optional: "optional", phone: "Put my phone away", laptop: "Open my laptop", back: "Back", start: "Start working", phoneCue: "The phone slides away, with a sound", laptopCue: "The laptop opens" },
+    slots: { morning: "Morning", day: "Daytime", night: "Night" },
+    focus: {
+      status: ["Someone nearby is typing quietly.", "The barista sets your cup down on the table.", "A student by the window turns a page.", "The room is quiet. Stay with what's in front of you.", "The people around you are settling in too.", "Your seat is still here. Start with one small step."],
+      pause: "Pause", resume: "Resume", end: "End", comeBack: "Come back", armed: "End the session?", paused: "Paused", mainPaused: (t) => `Main timer paused at ${t}`,
+      keys: "Space to pause · Esc to end · M to mute", roomSound: "Room sound", on: "Room sound on", off: "Room sound off", slot: "Change time of day", mixer: "Adjust the room sound", music: "Music player", close: "Close",
+      layers: ["Café voices", "Rain", "Street", "Birdsong", "Typing", "Cups and stirring", "Back counter"],
+      musicNote: "Music lives in the player at the bottom right. Jazz and YouTube can't play at the same time.",
+      slotCue: (s) => `Time of day: ${s} (sound only)`, restored: "Your table was kept for you.", breakStatus: (t) => `Take a breather. I'll bring you back to “${t}” in five minutes.`, breakOver: "Cup's back on the table. Let's go.", cupCue: "The sound of a cup set down", fadeCue: "Music fades out over 2 seconds",
+      breakReady: { who: "Barista", line: "Want a five-minute break?", thought: "You've been at it for 25 minutes. The main timer waits while you rest.", a: "Take 5 minutes", b: "Keep going" },
+      pauseLong: { who: "The student by the window", line: "Your seat's still here.", thought: (t) => `Come back to “${t}” with one small step.`, a: "Back to it", b: "Not yet" },
+      demo: { title: "Demo", items: ["Show the break offer (after 25 min)", "Show the pause reminder (after 90 s paused)", "Show the restored-session line", "Skip ahead 25 minutes", "Skip to the end", "Fade the UI now (normally after 20 s idle)"] },
+    },
+    player: { source: "Source", yt: "YouTube station", prev: "Previous", play: "Play or pause", next: "Next", vol: "Music volume", ytTitle: "Jazz piano (YouTube station)", ytArtist: "Jazz paused. YouTube keeps its own time.", ytMini: "YouTube station · Jazz piano" },
+    stations: ["Piano Corner", "Mellow Sax", "Cocktail Hour", "Lo-fi Jazz", "Guitar Patio", "Swing Time"],
+    complete: { done: "Session complete", early: "Ended early", doneTitle: (t, m) => `You stayed with “${t}” for ${m} minutes.`, earlyTitle: (t) => `You spent a little while with “${t}.” That counts too.`, card: "Stamp card · Card 1", stat: (n, m) => `${n} visits · ${m} minutes in all · one more stamp`, again: "Visit again", more: (m) => `Stay another ${m} minutes`, stampCue: "The new stamp lands with the sound of a cup set down", moreCue: (m) => `Same table, another ${m} minutes`, leaveCue: "Leaving: the room dims, the bell rings" },
+  },
+};
+let lang = "zh";
+const T = () => COPY[lang];
+
+const DRINK_IDS = ["iced-latte", "americano", "matcha", "cappuccino", "water"];
+const SEAT_IDS = ["window", "corner", "bar", "quiet"];
+const SEAT_ICON = { window: "📖", corner: "🛋", bar: "☕", quiet: "💻" };
+const SEAT_FP = { window: [.4, .55, .36], corner: [.5, .18, 0], bar: [.58, .08, .04], quiet: [.28, .12, 0] };
+const SEAT_MIX = { window: [40,55,36,40,16,16,4], corner: [50,18,0,18,24,14,8], bar: [58,8,4,12,28,42,42], quiet: [28,12,0,10,12,8,0] };
+const TRACKS = [["Coffee Shop", "alex-morgan", "linear-gradient(135deg,#7a4b2a,#d89845)"], ["Rainy Afternoon", "lnplusmusic", "linear-gradient(135deg,#3d6074,#9ccf8a)"], ["Velvet Hour", "aurec", "linear-gradient(135deg,#5b3727,#c8323c)"], ["Late Study", "leberch", "linear-gradient(135deg,#203c31,#7fb2d9)"], ["Patio Strings", "atlasaudio", "linear-gradient(135deg,#9a5f43,#f0a04b)"], ["Swing Time", "alex-morgan", "linear-gradient(135deg,#2b2b2e,#a58ad6)"]];
+const SLOT_ICON = { morning: "☀", day: "🌤", night: "🌙" };
+const SLOT_ORDER = ["morning", "day", "night"];
+
+const S = {
+  scene: "entrance", drink: null, seat: null, task: "", minutes: 45, custom: "", slot: "day", rituals: { phone: false, laptop: false },
+  remaining: 0, endAt: 0, paused: false, pausedLeft: 0, endArmed: 0, intervention: null, onBreak: false, breakEnd: 0, breakOffered: false,
+  mixer: false, player: false, playing: false, source: 0, ytSource: false, progress: 0, volume: 40, ambience: true, visits: 0, statusIdx: 0,
+};
+const $ = (s, r = document) => r.querySelector(s);
+const el = (h) => { const t = document.createElement("template"); t.innerHTML = h.trim(); return t.content.firstElementChild; };
+
+let bgToggle = false;
+function setBackdrop(key) {
+  const a = $("#bgA"), b = $("#bgB");
+  const cur = bgToggle ? b : a, next = bgToggle ? a : b;
+  if (cur.getAttribute("src") === IMG[key] && cur.classList.contains("on")) return;
+  bgToggle = !bgToggle;
+  next.src = IMG[key];
+  const show = () => { next.classList.add("on"); cur.classList.remove("on"); };
+  next.complete && next.naturalWidth ? show() : (next.onload = show);
+}
+function toast(msg, ms = 2600) { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("on"), ms); }
+const fmt = (sec) => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+const seatName = () => S.seat ? T().seats[S.seat][0] : "";
+const drinkName = () => S.drink ? T().drinks[S.drink][0] : "";
+const effMinutes = () => { const c = Number(S.custom); return S.custom && c >= 5 && c <= 180 ? c : S.minutes; };
+
+function renderProgress() {
+  const t = T();
+  const i = { entrance: 0, order: 1, seat: 2, setup: 3, focus: 4, complete: 4 }[S.scene];
+  $("#progress").innerHTML = `<div class="segs">${t.steps.map((n, k) => `<span class="seg ${k < i ? "done" : k === i ? "now" : ""}" ${k === i ? 'aria-current="step"' : ""} title="${n}"></span>`).join("")}</div><div class="label">${t.stepLabel(i + 1, t.steps[i])}</div>`;
+  const m = $("#mute"); m.hidden = S.scene === "entrance"; m.setAttribute("aria-label", t.mute); m.title = t.mute; m.innerHTML = S.ambience ? SPK : "✕"; m.setAttribute("aria-pressed", S.ambience);
+}
+
+function go(scene) {
+  S.scene = scene;
+  document.body.classList.remove("quiet");
+  $("#bar").innerHTML = "";
+  $("#main").innerHTML = "";
+  renderProgress();
+  ({ entrance, order, seat, setup, focus, complete })[scene]();
+  window.scrollTo(0, 0);
+}
+
+/* ---------- entrance ---------- */
+function entrance() {
+  const t = T().entrance;
+  setBackdrop("entrance");
+  const m = $("#main");
+  m.append(el(`<section class="scene entrance"><div class="hero">
+    <p class="eyebrow">${S.visits ? t.visit(S.visits + 1) : t.eyebrow}</p>
+    <h1>${t.title}</h1>
+    <p class="lede">${t.lede}</p>
+    <p class="presence">${t.presence}</p>
+    <button class="btn primary" id="enter">🚪 ${t.enter}</button>
+    ${S.visits ? `<div class="stamp-card" style="max-width:420px"><div class="h"><span>${T().complete.card}</span><span>${S.visits} / 10</span></div><div class="stamps">${Array.from({ length: 10 }, (_, k) => `<i class="${k < S.visits ? "filled" : ""}">${k < S.visits ? "☕" : ""}</i>`).join("")}</div></div>` : ""}
+    <p class="note">${t.note} · <a href="#">${t.privacy}</a> · <a href="#">${t.feedback}</a></p>
+  </div></section>`));
+  m.append(el(`<button class="door" id="door" aria-label="${t.door}" title="${t.door}"></button>`));
+  let entering = false;
+  const enter = () => {
+    if (entering) return; entering = true;
+    $("#backdrop").classList.add("door");
+    toast(t.cue, 1200);
+    setTimeout(() => { go("order"); setTimeout(() => $("#backdrop").classList.remove("door"), 60); }, 800);
+  };
+  $("#enter").onclick = enter; $("#door").onclick = enter;
+}
+
+/* ---------- order ---------- */
+function order() {
+  const t = T().order, D = T().drinks;
+  setBackdrop("order");
+  const m = $("#main");
+  const cards = DRINK_IDS.map((id) => `<button class="card" role="radio" aria-checked="${S.drink === id}" data-id="${id}"><span class="tick">✓</span><span class="ic">☕</span><span class="name">${D[id][0]}</span><span class="sub">${D[id][1]}</span></button>`).join("");
+  m.append(el(`<section class="scene"><div class="panel m">
+    <p class="eyebrow">${t.eyebrow}</p><h2>${t.title}</h2>
+    <div class="bubble"><div class="av">☕</div><div><div class="who">${t.barista}</div><div class="say" id="say">${S.drink ? t.reply : t.hello}</div></div></div>
+    <div class="grid five" role="radiogroup" aria-label="${t.eyebrow}" id="drinks">${cards}</div>
+    <div class="actions"><span></span><button class="btn primary" id="next" aria-disabled="${!S.drink}">${t.next} ▸</button></div>
+  </div></section>`));
+  $("#bar").append(el(`<button class="btn primary" id="nextBar" aria-disabled="${!S.drink}">${t.next} ▸</button>`));
+  $("#drinks").onclick = (e) => {
+    const b = e.target.closest(".card"); if (!b) return;
+    S.drink = b.dataset.id;
+    [...$("#drinks").children].forEach((c) => c.setAttribute("aria-checked", c === b));
+    const say = $("#say"); say.style.opacity = 0; setTimeout(() => { say.textContent = t.reply; say.style.opacity = 1; }, 160);
+    $("#next").setAttribute("aria-disabled", "false"); $("#nextBar").setAttribute("aria-disabled", "false");
+    toast(t.cue(drinkName()), 1200);
+  };
+  const next = () => { if (S.drink) go("seat"); };
+  $("#next").onclick = next; $("#nextBar").onclick = next;
+}
+
+/* ---------- seat ---------- */
+function seat() {
+  const t = T().seat, SE = T().seats;
+  setBackdrop(S.seat || "seat");
+  const m = $("#main");
+  const dots = (v) => { const n = Math.round(v * 3); return `<i class="${n > 0 ? "on" : ""}"></i><i class="${n > 1 ? "on" : ""}"></i><i class="${n > 2 ? "on" : ""}"></i>`; };
+  const cards = SEAT_IDS.map((id) => `<button class="card" role="radio" aria-checked="${S.seat === id}" data-id="${id}"><span class="tick">✓</span><span class="ic">${SEAT_ICON[id]}</span><span class="name">${SE[id][0]}</span><span class="sub">${SE[id][1]}</span><span class="desc">${SE[id][2]}</span><span class="fp"><span>${t.fp[0]} ${dots(SEAT_FP[id][0])}</span><span>${t.fp[1]} ${dots(SEAT_FP[id][1])}</span><span>${t.fp[2]} ${dots(SEAT_FP[id][2])}</span></span></button>`).join("");
+  m.append(el(`<section class="scene"><div class="panel l">
+    <p class="eyebrow">${t.eyebrow}</p><h2>${t.title}</h2>
+    <div class="grid two" role="radiogroup" aria-label="${t.eyebrow}" id="seats">${cards}</div>
+    <div class="actions"><button class="btn ghost" id="back">← ${t.back}</button><button class="btn primary" id="next" aria-disabled="${!S.seat}">${t.next} ▸</button></div>
+  </div></section>`));
+  $("#bar").append(el(`<button class="btn ghost" id="backBar">← ${t.back}</button>`), el(`<button class="btn primary" id="nextBar" aria-disabled="${!S.seat}">${t.next} ▸</button>`));
+  $("#seats").onclick = (e) => {
+    const b = e.target.closest(".card"); if (!b) return;
+    S.seat = b.dataset.id;
+    [...$("#seats").children].forEach((c) => c.setAttribute("aria-checked", c === b));
+    setBackdrop(S.seat);
+    $("#next").setAttribute("aria-disabled", "false"); $("#nextBar").setAttribute("aria-disabled", "false");
+    toast(t.cue(seatName()), 1200);
+  };
+  const next = () => { if (S.seat) go("setup"); };
+  $("#next").onclick = next; $("#nextBar").onclick = next; $("#back").onclick = () => go("order"); $("#backBar").onclick = () => go("order");
+}
+
+/* ---------- setup ---------- */
+function setup() {
+  const t = T().setup, SL = T().slots;
+  setBackdrop("setup");
+  const m = $("#main");
+  const durs = [25, 45, 60, 90].map((n) => `<button role="radio" aria-checked="${!S.custom && S.minutes === n}" data-n="${n}">${n} ${t.min}</button>`).join("");
+  const slots = SLOT_ORDER.map((id) => `<button role="radio" aria-checked="${S.slot === id}" data-id="${id}">${SLOT_ICON[id]} ${SL[id]}</button>`).join("");
+  m.append(el(`<section class="scene"><div class="panel m">
+    <div class="receipt"><span>${seatName()} · ${drinkName()} · <b id="rmin">${effMinutes()}</b> ${t.min}</span><a href="#" id="edit">${t.change}</a></div>
+    <h2>${t.title}</h2>
+    <div class="field"><label for="task">${t.task}</label><input class="text" id="task" placeholder="${t.placeholder}" value="${S.task}"><p class="hint" id="taskHint"></p></div>
+    <div class="field"><span class="lab">${t.howLong}</span><div class="seg" role="radiogroup" id="durs">${durs}<span class="custom"><input id="custom" inputmode="numeric" placeholder="${t.custom}" value="${S.custom}" aria-label="${t.custom}"> ${t.min}</span></div><p class="hint" id="durHint"></p></div>
+    <div class="field"><span class="lab">${t.when}<small>${t.whenNote}</small></span><div class="seg slots" role="radiogroup" id="slots" style="margin:0">${slots}</div></div>
+    <div class="field"><span class="lab">${t.before}<small>${t.optional}</small></span><div class="seg"><button class="ritual" id="rPhone" aria-pressed="${S.rituals.phone}">${S.rituals.phone ? "✓" : "📱"} ${t.phone}</button><button class="ritual" id="rLaptop" aria-pressed="${S.rituals.laptop}">${S.rituals.laptop ? "✓" : "💻"} ${t.laptop}</button></div></div>
+    <div class="actions"><button class="btn ghost" id="back">← ${t.back}</button><button class="btn primary" id="start" aria-disabled="${!S.task.trim()}">▶ ${t.start}</button></div>
+  </div></section>`));
+  $("#bar").append(el(`<button class="btn ghost" id="backBar">← ${t.back}</button>`), el(`<button class="btn primary" id="startBar" aria-disabled="${!S.task.trim()}">▶ ${t.start}</button>`));
+  const task = $("#task"); task.focus();
+  const validate = () => {
+    const c = Number(S.custom);
+    const badDur = S.custom && !(c >= 5 && c <= 180);
+    $("#durHint").textContent = badDur ? t.durHint : "";
+    $("#durHint").classList.toggle("bad", badDur);
+    const ok = S.task.trim() && !badDur;
+    $("#start").setAttribute("aria-disabled", !ok); $("#startBar").setAttribute("aria-disabled", !ok);
+    $("#rmin").textContent = effMinutes();
+    [...$("#durs").querySelectorAll("button")].forEach((b) => b.setAttribute("aria-checked", !S.custom && S.minutes === Number(b.dataset.n)));
+    return ok;
+  };
+  task.oninput = () => { S.task = task.value; $("#taskHint").textContent = ""; validate(); };
+  task.onkeydown = (e) => { if (e.key === "Enter") start(); };
+  $("#durs").onclick = (e) => { const b = e.target.closest("button[data-n]"); if (!b) return; S.minutes = Number(b.dataset.n); S.custom = ""; $("#custom").value = ""; validate(); };
+  $("#custom").oninput = (e) => { S.custom = e.target.value.trim(); validate(); };
+  $("#slots").onclick = (e) => { const b = e.target.closest("button[data-id]"); if (!b) return; S.slot = b.dataset.id; [...$("#slots").children].forEach((c) => c.setAttribute("aria-checked", c === b)); };
+  const ritual = (id, key, icon, label, cue) => { $(id).onclick = () => { S.rituals[key] = !S.rituals[key]; $(id).setAttribute("aria-pressed", S.rituals[key]); $(id).textContent = `${S.rituals[key] ? "✓" : icon} ${label}`; if (S.rituals[key]) toast(cue, 1000); }; };
+  ritual("#rPhone", "phone", "📱", t.phone, t.phoneCue); ritual("#rLaptop", "laptop", "💻", t.laptop, t.laptopCue);
+  const start = () => { if (!validate()) { if (!S.task.trim()) $("#taskHint").textContent = t.taskHint; return; } startSession(); };
+  $("#start").onclick = start; $("#startBar").onclick = start; $("#back").onclick = () => go("seat"); $("#backBar").onclick = () => go("seat");
+  $("#edit").onclick = (e) => { e.preventDefault(); go("seat"); };
+}
+
+/* ---------- focus ---------- */
+let tick = null, idleT = null, statusT = null, progT = null;
+function startSession() {
+  const total = effMinutes() * 60;
+  Object.assign(S, { remaining: total, endAt: Date.now() + total * 1000, paused: false, endArmed: 0, intervention: null, onBreak: false, breakOffered: false, mixer: false, statusIdx: 0 });
+  go("focus");
+}
+function focus() {
+  const t = T().focus, P = T().player, SL = T().slots, ST = T().stations;
+  setBackdrop(S.seat || "window");
+  const m = $("#main");
+  const mix = SEAT_MIX[S.seat] || SEAT_MIX.window;
+  const sliders = t.layers.map((n, i) => `<div class="sl"><div class="lab"><span>${n}</span><span id="v${i}">${mix[i]}%</span></div><input type="range" min="0" max="100" value="${mix[i]}" data-i="${i}" aria-label="${n}"></div>`).join("");
+  const slots = SLOT_ORDER.map((id) => `<button role="radio" aria-checked="${S.slot === id}" data-id="${id}">${SLOT_ICON[id]} ${SL[id]}</button>`).join("");
+  const tr = TRACKS[S.source];
+  const nowTitle = S.ytSource ? P.ytTitle : tr[0], nowArtist = S.ytSource ? P.ytArtist : `${tr[1]} · ${ST[S.source]}`, nowMini = S.ytSource ? P.ytMini : `${tr[0]} · ${ST[S.source]}`;
+  m.append(el(`<section class="scene focus">
+    <details class="demo" id="demo"><summary>${t.demo.title} ▾</summary><div class="menu">${["break", "pause", "restore", "jump", "end", "quiet"].map((k, i) => `<button data-d="${k}">${t.demo.items[i]}</button>`).join("")}</div></details>
+    <div class="timer-card" id="timerCard">
+      <p class="eyebrow" style="margin:0">${seatName()}</p>
+      <div class="task" title="${S.task}">${S.task}</div>
+      <div><span class="time" id="time">${fmt(S.remaining)}</span><span class="pstate" id="pstate"></span></div>
+      <p class="status" id="status" aria-live="polite">${t.status[S.statusIdx]}</p>
+      <div class="ctl"><button class="btn secondary" id="pause"></button><button class="btn ghost" id="end"></button><span class="hint-k">${t.keys}</span></div>
+    </div>
+    <div id="intSlot"></div>
+    <div class="rail" id="rail">
+      <button class="icon-btn" id="rAmb" aria-pressed="true" aria-label="${t.roomSound}" title="${t.roomSound}"></button>
+      <button class="icon-btn" id="rSlot" aria-label="${t.slot}" title="${t.slot}">${SLOT_ICON[S.slot]}</button>
+      <button class="icon-btn" id="rMix" aria-pressed="false" aria-expanded="false" aria-controls="overlay" aria-label="${t.mixer}" title="${t.mixer}">≡</button>
+      <button class="icon-btn" id="rMusic" aria-pressed="${S.player}" aria-label="${t.music}" title="${t.music}">♫<span class="beat ${S.playing ? "on" : ""}" id="beat"></span></button>
+    </div>
+    <aside class="overlay" id="overlay" aria-label="${t.roomSound}">
+      <h3>${t.roomSound} <button class="icon-btn" id="closeMix" aria-label="${t.close}" style="width:30px;height:30px">✕</button></h3>
+      <button class="switch" id="ambSwitch" aria-pressed="true"></button>
+      <div class="slots" role="radiogroup" id="slots2">${slots}</div>
+      ${sliders}
+      <p class="music-note">${t.musicNote}</p>
+    </aside>
+    <div class="player" id="player">
+      <div class="mini"><span class="cov" id="miniCov" style="background:${tr[2]}"></span><button class="t" id="miniT" aria-expanded="${S.player}">${nowMini}</button><button class="icon-btn" id="miniPlay" aria-label="${P.play}">${S.playing ? "❚❚" : "▶"}</button><button class="icon-btn" id="miniNext" aria-label="${P.next}">▶▶</button></div>
+      <div class="full">
+        <div class="src" role="radiogroup" aria-label="${P.source}" id="src">${ST.map((s, i) => `<button role="radio" aria-checked="${!S.ytSource && S.source === i}" data-i="${i}">${s}</button>`).join("")}<button role="radio" aria-checked="${S.ytSource}" class="yt" data-i="yt">${P.yt}</button></div>
+        <div class="now"><span class="cov big" id="cov" style="background:${tr[2]}"></span><div style="min-width:0"><div class="title" id="title">${nowTitle}</div><div class="artist" id="artist">${nowArtist}</div></div></div>
+        <div class="prog"><i id="prog"></i></div><div class="times" id="times">0:00 / 3:00</div>
+        <div class="ctl"><button class="icon-btn" id="prev" aria-label="${P.prev}">◀◀</button><button class="icon-btn" id="play" aria-label="${P.play}">${S.playing ? "❚❚" : "▶"}</button><button class="icon-btn" id="nextT" aria-label="${P.next}">▶▶</button><span class="vol">${SPK}<input type="range" min="0" max="100" value="${S.volume}" id="vol" aria-label="${P.vol}"></span></div>
+        <div class="fail" id="fail"></div>
+      </div>
+    </div>
+    <div class="sheet-handle" id="handle">${t.mixer}</div>
+  </section>`));
+  $("#bar").append(el(`<button class="btn secondary" id="pauseBar"></button>`), el(`<button class="btn ghost" id="endBar"></button>`));
+  $("#player").classList.toggle("open", S.player);
+
+  clearInterval(tick); clearInterval(statusT); clearInterval(progT);
+  tick = setInterval(step, 250);
+  statusT = setInterval(() => { S.statusIdx = (S.statusIdx + 1) % t.status.length; const s = $("#status"); if (s && !S.onBreak && !S.paused) s.textContent = t.status[S.statusIdx]; }, 45000);
+
+  const pauseBtns = [$("#pause"), $("#pauseBar")], endBtns = [$("#end"), $("#endBar")];
+  const paintCtl = () => {
+    pauseBtns.forEach((b) => { b.textContent = S.onBreak ? `▶ ${t.comeBack}` : S.paused ? `▶ ${t.resume}` : `⏸ ${t.pause}`; b.className = `btn ${S.paused || S.onBreak ? "primary" : "secondary"}`; });
+    endBtns.forEach((b) => { b.textContent = S.endArmed ? t.armed : `■ ${t.end}`; b.className = `btn ${S.endArmed ? "danger-armed secondary" : "ghost"}`; });
+    $("#time").className = `time ${S.onBreak ? "break" : S.paused ? "paused" : ""}`;
+    $("#pstate").textContent = S.onBreak ? t.mainPaused(fmt(S.pausedLeft)) : S.paused ? t.paused : "";
+  };
+  const togglePause = () => {
+    if (S.onBreak) { finishBreak(); return; }
+    if (S.paused) { S.endAt = Date.now() + S.pausedLeft * 1000; S.paused = false; clearTimeout(S._pauseT); if (S.intervention === "pauseLong") showIntervention(null); $("#status").textContent = t.status[S.statusIdx]; }
+    else { S.pausedLeft = S.remaining; S.paused = true; S._pauseT = setTimeout(() => showIntervention("pauseLong"), 90000); }
+    paintCtl();
+  };
+  const endPress = () => {
+    if (S.endArmed) { clearTimeout(S._armT); S.endArmed = 0; finish("ended"); return; }
+    S.endArmed = 1; paintCtl();
+    S._armT = setTimeout(() => { S.endArmed = 0; paintCtl(); }, 4000);
+  };
+  pauseBtns.forEach((b) => (b.onclick = togglePause)); endBtns.forEach((b) => (b.onclick = endPress));
+  S._paintCtl = paintCtl; S._togglePause = togglePause;
+
+  const setMixer = (open) => { S.mixer = open; $("#overlay").classList.toggle("open", open); $("#rMix").setAttribute("aria-pressed", open); $("#rMix").setAttribute("aria-expanded", open); if (open) $("#closeMix").focus(); else $("#rMix").focus({ preventScroll: true }); };
+  $("#rMix").onclick = () => setMixer(!S.mixer); $("#closeMix").onclick = () => setMixer(false); $("#handle").onclick = () => setMixer(!S.mixer);
+  if (!S._outsideBound) { document.addEventListener("click", (e) => { if (S.scene === "focus" && S.mixer && !e.target.closest("#overlay, #rMix, #handle")) S._setMixer(false); }); S._outsideBound = true; }
+  S._setMixer = setMixer;
+  const ambPaint = () => { $("#rAmb").setAttribute("aria-pressed", S.ambience); $("#rAmb").innerHTML = S.ambience ? SPK : "✕"; $("#ambSwitch").setAttribute("aria-pressed", S.ambience); $("#ambSwitch").innerHTML = (S.ambience ? SPK + " " + t.on : "✕ " + t.off); $("#mute").setAttribute("aria-pressed", S.ambience); $("#mute").innerHTML = S.ambience ? SPK : "✕"; if (!S.ambience && S.playing) setPlaying(false); };
+  $("#rAmb").onclick = () => { S.ambience = !S.ambience; ambPaint(); }; $("#ambSwitch").onclick = $("#rAmb").onclick;
+  const paintSlot = () => { $("#rSlot").textContent = SLOT_ICON[S.slot]; [...$("#slots2").children].forEach((b) => b.setAttribute("aria-checked", b.dataset.id === S.slot)); };
+  $("#rSlot").onclick = () => { S.slot = SLOT_ORDER[(SLOT_ORDER.indexOf(S.slot) + 1) % 3]; paintSlot(); toast(t.slotCue(SL[S.slot]), 1200); };
+  $("#slots2").onclick = (e) => { const b = e.target.closest("button[data-id]"); if (!b) return; S.slot = b.dataset.id; paintSlot(); };
+  $("#overlay").oninput = (e) => { const r = e.target.closest("input[type=range]"); if (r) $(`#v${r.dataset.i}`).textContent = `${r.value}%`; };
+
+  const setPlaying = (on) => { S.playing = on; $("#play").textContent = on ? "❚❚" : "▶"; $("#miniPlay").textContent = on ? "❚❚" : "▶"; $("#beat").classList.toggle("on", on); if (on && !S.ambience) { S.ambience = true; ambPaint(); } };
+  const paintStation = () => { S.ytSource = false; const s = TRACKS[S.source]; [$("#cov"), $("#miniCov")].forEach((c) => (c.style.background = s[2])); $("#title").textContent = s[0]; $("#artist").textContent = `${s[1]} · ${ST[S.source]}`; $("#miniT").textContent = `${s[0]} · ${ST[S.source]}`; [...$("#src").children].forEach((b) => b.setAttribute("aria-checked", b.dataset.i == S.source)); S.progress = 0; $("#fail").textContent = ""; };
+  const setPlayer = (open) => { S.player = open; $("#player").classList.toggle("open", open); $("#rMusic").setAttribute("aria-pressed", open); $("#miniT").setAttribute("aria-expanded", open); };
+  $("#rMusic").onclick = () => setPlayer(!S.player); $("#miniT").onclick = () => setPlayer(!S.player);
+  $("#play").onclick = () => setPlaying(!S.playing); $("#miniPlay").onclick = $("#play").onclick;
+  $("#nextT").onclick = () => { S.source = (S.source + 1) % TRACKS.length; paintStation(); setPlaying(true); }; $("#miniNext").onclick = $("#nextT").onclick;
+  $("#prev").onclick = () => { S.source = (S.source + TRACKS.length - 1) % TRACKS.length; paintStation(); setPlaying(true); };
+  $("#src").onclick = (e) => {
+    const b = e.target.closest("button[data-i]"); if (!b) return;
+    if (b.dataset.i === "yt") { S.ytSource = true; [...$("#src").children].forEach((x) => x.setAttribute("aria-checked", x === b)); $("#title").textContent = P.ytTitle; $("#artist").textContent = P.ytArtist; $("#miniT").textContent = P.ytMini; $("#fail").textContent = ""; setPlaying(true); return; }
+    S.source = Number(b.dataset.i); paintStation(); setPlaying(true);
+  };
+  $("#vol").oninput = (e) => { S.volume = Number(e.target.value); };
+  progT = setInterval(() => { if (!S.playing || S.scene !== "focus") return; S.progress = (S.progress + 0.25 / 180) % 1; const p = $("#prog"), tm = $("#times"); if (p) p.style.width = `${S.progress * 100}%`; if (tm) tm.textContent = `${fmt(Math.floor(S.progress * 180)).replace(/^0/, "")} / 3:00`; }, 250);
+
+  const wake = () => { document.body.classList.remove("quiet"); clearTimeout(idleT); idleT = setTimeout(() => { if (S.scene === "focus") document.body.classList.add("quiet"); }, 20000); };
+  S._wake = wake;
+  if (!S._wakeBound) { ["pointermove", "pointerdown", "keydown", "touchstart", "wheel"].forEach((ev) => document.addEventListener(ev, () => S.scene === "focus" && S._wake(), { passive: true })); S._wakeBound = true; }
+  wake();
+
+  $("#demo").onclick = (e) => {
+    const b = e.target.closest("button[data-d]"); if (!b) return; $("#demo").open = false;
+    ({ break: () => showIntervention("breakReady"), pause: () => showIntervention("pauseLong"), restore: () => { $("#status").textContent = t.restored; setTimeout(() => { const s = $("#status"); if (s) s.textContent = t.status[S.statusIdx]; }, 6000); },
+      jump: () => { S.endAt -= 25 * 60 * 1000; }, end: () => finish("completed"), quiet: () => { clearTimeout(idleT); document.body.classList.add("quiet"); } })[b.dataset.d]();
+  };
+  paintCtl(); ambPaint();
+  if (S.intervention) showIntervention(S.intervention);
+}
+function step() {
+  if (S.scene !== "focus") return;
+  if (S.onBreak) { const left = Math.max(0, Math.round((S.breakEnd - Date.now()) / 1000)); $("#time").textContent = fmt(left); if (left === 0) finishBreak(); return; }
+  if (S.paused) return;
+  S.remaining = Math.max(0, Math.round((S.endAt - Date.now()) / 1000));
+  $("#time").textContent = fmt(S.remaining);
+  document.title = `${fmt(S.remaining)} · ${S.task}`;
+  const elapsed = effMinutes() * 60 - S.remaining;
+  if (!S.breakOffered && elapsed >= 25 * 60 && S.remaining >= 5 * 60) { S.breakOffered = true; showIntervention("breakReady"); }
+  if (S.remaining === 0) finish("completed");
+}
+function showIntervention(kind) {
+  const t = T().focus;
+  S.intervention = kind;
+  const slot = $("#intSlot"); if (!slot) return; slot.innerHTML = "";
+  if (!kind) return;
+  const d = kind === "breakReady" ? t.breakReady : t.pauseLong;
+  const thought = typeof d.thought === "function" ? d.thought(S.task) : d.thought;
+  const act = kind === "breakReady" ? [() => startBreak(), () => showIntervention(null)] : [() => S._togglePause(), () => showIntervention(null)];
+  slot.append(el(`<div class="card-int" role="region" aria-label="${d.who}"><div class="who">${d.who}</div><div class="line">${d.line}</div><div class="thought">${thought}</div><div class="ctl"><button class="btn primary" id="iA">${d.a}</button><button class="btn ghost" id="iB">${d.b}</button></div></div>`));
+  $("#iA").onclick = act[0]; $("#iB").onclick = act[1];
+}
+function startBreak() { showIntervention(null); S.onBreak = true; S.pausedLeft = S.remaining; S.breakEnd = Date.now() + 5 * 60 * 1000; $("#status").textContent = T().focus.breakStatus(S.task); S._paintCtl(); }
+function finishBreak() { S.onBreak = false; S.endAt = Date.now() + S.pausedLeft * 1000; $("#status").textContent = T().focus.breakOver; toast(T().focus.cupCue, 1000); S._paintCtl(); }
+function finish(result) {
+  clearInterval(tick); clearInterval(statusT); clearInterval(progT); clearTimeout(idleT); document.body.classList.remove("quiet"); document.title = "Virtual Café Focus Room";
+  if (S.playing) toast(T().focus.fadeCue, 1500);
+  S.playing = false; S.intervention = null; S.result = result; S.visits += 1; go("complete");
+}
+
+/* ---------- complete ---------- */
+function complete() {
+  const t = T().complete;
+  setBackdrop("complete");
+  const m = $("#main");
+  const minutes = effMinutes();
+  const done = S.result === "completed";
+  const stamps = Array.from({ length: 10 }, (_, k) => `<i class="${k < S.visits ? "filled" : ""} ${k === S.visits - 1 ? "new" : ""}">${k < S.visits ? "☕" : ""}</i>`).join("");
+  m.append(el(`<section class="scene complete"><div class="panel m">
+    <p class="eyebrow">${done ? t.done : t.early}</p>
+    <h2>${done ? t.doneTitle(S.task, minutes) : t.earlyTitle(S.task)}</h2>
+    <div class="stamp-card"><div class="h"><span>${t.card}</span><span>${S.visits} / 10</span></div><div class="stamps">${stamps}</div><div class="stat">${t.stat(S.visits, S.visits * minutes)}</div></div>
+    <div class="actions"><button class="btn secondary" id="again">☕ ${t.again}</button><button class="btn primary" id="more">▶ ${t.more(minutes)}</button></div>
+  </div></section>`));
+  $("#bar").append(el(`<button class="btn secondary" id="againBar">☕ ${t.again}</button>`), el(`<button class="btn primary" id="moreBar">▶ ${t.more(minutes)}</button>`));
+  setTimeout(() => toast(t.stampCue, 1400), 400);
+  const more = () => { toast(t.moreCue(minutes), 1200); startSession(); };
+  const again = () => { $("#backdrop").classList.add("door"); toast(t.leaveCue, 1000); setTimeout(() => { Object.assign(S, { drink: null, seat: null, task: "", custom: "", rituals: { phone: false, laptop: false } }); go("entrance"); setTimeout(() => $("#backdrop").classList.remove("door"), 60); }, 800); };
+  $("#more").onclick = more; $("#moreBar").onclick = more; $("#again").onclick = again; $("#againBar").onclick = again;
+}
+
+/* ---------- language, keys ---------- */
+$("#langBox").onclick = (e) => {
+  const b = e.target.closest("button[data-l]"); if (!b || b.dataset.l === lang) return;
+  lang = b.dataset.l;
+  document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+  [...$("#langBox").children].forEach((x) => x.setAttribute("aria-pressed", x === b));
+  go(S.scene);
+};
+document.addEventListener("keydown", (e) => {
+  if (S.scene !== "focus") return;
+  const tag = (e.target.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "textarea") return;
+  if (e.key === " ") { e.preventDefault(); S._togglePause(); }
+  if (e.key === "Escape") { if (S.mixer) { $("#rMix").click(); return; } if (!S.paused) S._togglePause(); else $("#end").click(); }
+  if (e.key.toLowerCase() === "m") $("#rAmb").click();
+});
+$("#mute").onclick = () => { if (S.scene === "focus") $("#rAmb").click(); else { S.ambience = !S.ambience; renderProgress(); } };
+go("entrance");
+</script>
+</body>
+</html>

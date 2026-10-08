@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Moon, Pause, Play, SlidersHorizontal, Square, Sun, Sunrise, Volume2, VolumeX, X } from "lucide-react";
+import { Moon, Music, Pause, Play, SlidersHorizontal, Square, Sun, Sunrise, Volume2, VolumeX, X } from "lucide-react";
 import InterventionCard from "../components/InterventionCard.jsx";
 import Mixer from "../components/Mixer.jsx";
+import MusicPlayer from "../components/MusicPlayer.jsx";
 import { BREAK_INTERVENTIONS, PAUSE_INTERVENTIONS, STATUS_MESSAGES } from "../data/copy.js";
 import { formatTime } from "../lib/format.js";
 import { TIME_SLOTS } from "../lib/timeSlot.js";
@@ -21,6 +22,20 @@ function FocusScene({ copy, lang, plan, seat, drinkName, session, sound, mixerOp
   const { onBreak, remaining, breakRemaining, isRunning, intervention } = session;
   const pauseIntervention = seat ? PAUSE_INTERVENTIONS[seat.id] : null;
   const breakIntervention = seat ? BREAK_INTERVENTIONS[seat.id] : null;
+
+  // The music player card: open by hand, or kept open while YouTube plays (its video has
+  // to stay on screen), in which case closing it pauses the station.
+  const [playerOpen, setPlayerOpen] = useState(false);
+  const musicPlaying = sound.enabled && (sound.layerMix.youtube ?? 0) > 0;
+  const playerExpanded = playerOpen || musicPlaying;
+  const togglePlayer = () => {
+    if (playerExpanded) {
+      if (musicPlaying) sound.updateLayer("youtube", 0);
+      setPlayerOpen(false);
+    } else {
+      setPlayerOpen(true);
+    }
+  };
 
   // Ending takes two presses: the first arms the button for a few seconds.
   const [endArmed, setEndArmed] = useState(false);
@@ -208,6 +223,17 @@ function FocusScene({ copy, lang, plan, seat, drinkName, session, sound, mixerOp
           <SlidersHorizontal aria-hidden="true" />
           <span className="mixer-toggle-label">{mixerOpen ? copy.mixerHide : copy.mixerShow}</span>
         </button>
+        <button
+          className="rail-button"
+          type="button"
+          aria-pressed={playerExpanded}
+          aria-label={playerExpanded ? copy.playerCollapse : copy.playerExpand}
+          title={copy.playerTitle}
+          onClick={togglePlayer}
+        >
+          <Music aria-hidden="true" />
+          <span className={`rail-beat${musicPlaying ? " on" : ""}`} aria-hidden="true" />
+        </button>
       </div>
 
       <aside className={`focus-side${mixerOpen ? " open" : ""}`} aria-label={copy.detailsAria}>
@@ -226,9 +252,10 @@ function FocusScene({ copy, lang, plan, seat, drinkName, session, sound, mixerOp
           <strong>{seat?.label[lang]}</strong>
         </div>
         <div className="mixer-body" id="mixer-body">
-          <Mixer copy={copy} lang={lang} sound={sound} />
+          <Mixer copy={copy} sound={sound} />
         </div>
       </aside>
+      <MusicPlayer copy={copy} lang={lang} sound={sound} open={playerOpen} onOpenChange={setPlayerOpen} />
     </section>
   );
 }

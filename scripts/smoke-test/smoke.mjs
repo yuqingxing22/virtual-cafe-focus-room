@@ -78,7 +78,14 @@ try {
   check("countdown runs", first !== second && /^4[45]:/.test(second), `${first} -> ${second}`);
   check("tab title shows countdown", (await page.title()).includes("smoke test"), await page.title());
   check("morning: birdsong slider", (await sliderValue("Birdsong")) === "0.4", `value ${await sliderValue("Birdsong")}`);
+  check("music player bar", (await page.locator(".music-player").count()) === 1 && (await page.locator(".player-full").count()) === 0);
+  await page.locator(".music-player .player-now").click();
+  check("player opens with the stations", (await page.locator(".music-player .station-list button").count()) >= 4);
+  await page.locator(".music-player .player-button").last().click();
+  check("player collapses", (await page.locator(".player-full").count()) === 0);
+  await page.locator(".mixer-toggle").click();
   check("YouTube slider present", (await sliderValue("YouTube")) !== null);
+  await page.locator(".side-close").click();
 
   // Jazz is either paused (notice, no controls, no jazz requests) or on (slider and three playlists).
   const jazzPaused = (await page.locator(".layer-paused").count()) === 1;

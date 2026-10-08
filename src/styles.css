@@ -8,6 +8,7 @@
 @import "./styles/setup.css";
 @import "./styles/focus.css";
 @import "./styles/mixer.css";
+@import "./styles/player.css";
 @import "./styles/stamp-card.css";
 @import "./styles/complete.css";
 @import "./styles/error.css";

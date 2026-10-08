@@ -77,15 +77,14 @@ function Mixer({ copy, sound }) {
           value={layerMix.backCounter}
           onChange={(value) => updateLayer("backCounter", value)}
         />
-        {JAZZ_ENABLED ? (
-          <>
-            <SoundSlider
-              icon={<Music aria-hidden="true" />}
-              label={copy.soundLabels.jazz}
-              value={layerMix.jazz ?? 0}
-              onChange={(value) => updateLayer("jazz", value)}
-            />
-            <div className="mode-buttons jazz-modes" aria-label={copy.jazzModeLabel}>
+        <SoundSlider
+          icon={<Music aria-hidden="true" />}
+          label={copy.soundLabels.jazz}
+          value={layerMix.jazz ?? 0}
+          onChange={(value) => updateLayer("jazz", value)}
+        />
+        {JAZZ_ENABLED && (
+          <div className="mode-buttons jazz-modes" aria-label={copy.jazzModeLabel}>
               {JAZZ_MODES.map((mode) => (
                 <button
                   className={sound.jazzMode === mode ? "active" : ""}
@@ -96,16 +95,7 @@ function Mixer({ copy, sound }) {
                 >
                   {copy.jazzModes[mode]}
                 </button>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="layer-paused" role="note">
-            <span>
-              <Music aria-hidden="true" />
-              {copy.soundLabels.jazz}
-            </span>
-            <p>{copy.jazzPaused}</p>
+            ))}
           </div>
         )}
         <SoundSlider

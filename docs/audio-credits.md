@@ -47,9 +47,9 @@
 | `drip-coffee.mp3` | 手冲滴滤 | freesound_community | 33785 |
 | `cup-set-down.mp3` | 杯子放到桌上 | freesound_community | 106992 |
 
-## 爵士歌单
+## 爵士歌单（旧的三个歌单，2026-10-08 起界面不再使用）
 
-全部来自 Pixabay，适用 Pixabay Content License。
+全部来自 Pixabay，适用 Pixabay Content License。2026-10-08 起混音器不再提供这三个歌单，音乐改由下面的六个电台提供；文件仍在 R2 和代码里（`JAZZ_PLAYLISTS`），按用户的规则没有删。
 
 | 线上文件 | Pixabay 上的曲名 | 作者 | Pixabay 编号 |
 | --- | --- | --- | --- |
@@ -64,6 +64,59 @@
 | `jazz/club/01-jazz-club.mp3` | The Best Jazz Club in New Orleans | paoloargento | 164472 |
 | `jazz/club/02-west-coast-jazz.mp3` | Jazz Cafe Music | tunetank | 348267 |
 | `jazz/club/03-jazz-4.mp3` | Jazz（和 `jazz/cafe/03-jazz-4.mp3` 是同一个文件） | atlasaudio | 519632 |
+
+## 爵士电台（2026-10-08 起，播放器用）
+
+专注页播放器里的六个爵士电台，44 首，全部来自 Pixabay，适用 Pixabay Content License。线上是 128 kbps 的版本（用户听过对比后定的），256 kbps 原版在本机 `jazz-music/<电台>/`，整理记录在 `jazz-music/SOURCES.md`。文件名里的 px 号就是 Pixabay 编号；「原文件名」是下载时的名字。有 11 首和上面旧歌单里的录音是同一首，线上是不同的 key，旧文件没有删。
+
+作者（Pixabay 用户名）：alex-morgan、andriih、atlasaudio、aurec、freemusicforvideo、leberch、lnplusmusic、ornave、paoloargento、starostin、tatamusic、the_mountain、tunetank、velariomusic、waveloom、zephiramusic。
+
+| 线上文件 | 原文件名 | 作者 | Pixabay 编号 |
+| --- | --- | --- | --- |
+| `jazz/piano-corner/jazz-coffee-shop-px556234.mp3` | alex-morgan-jazz-coffee-shop-music-556234.mp3 | alex-morgan | 556234 |
+| `jazz/piano-corner/jazz-piano-restaurant-px564275.mp3` | alex-morgan-jazz-piano-restaurant-music-564275.mp3 | alex-morgan | 564275 |
+| `jazz/piano-corner/jazz-rainy-night-keys-px567549.mp3` | alex-morgan-saxophone-jazz-rainy-night-567549.mp3 | alex-morgan | 567549 |
+| `jazz/piano-corner/jazz-vibes-background-px556245.mp3` | alex-morgan-jazz-corporate-background-music-556245.mp3 | alex-morgan | 556245 |
+| `jazz/piano-corner/jazz-piano-px584847.mp3` | aurec-jazz-584847.mp3 | aurec | 584847 |
+| `jazz/piano-corner/jazz-bar-piano-px592657.mp3` | aurec-jazz-bar-592657.mp3 | aurec | 592657 |
+| `jazz/piano-corner/jazz-waltz-px602643.mp3` | aurec-jazz-waltz-602643.mp3 | aurec | 602643 |
+| `jazz/piano-corner/jazz-solo-piano-px578722.mp3` | leberch-jazz-piano-578722.mp3 | leberch | 578722 |
+| `jazz/piano-corner/jazz-piano-trio-px611049.mp3` | lnplusmusic-jazz-jazz-music-611049.mp3 | lnplusmusic | 611049 |
+| `jazz/piano-corner/jazz-mallets-px519632.mp3` | jazz4 2.mp3 | atlasaudio | 519632（旧歌单里也有） |
+| `jazz/mellow-sax/jazz-cafe-morning-px556238.mp3` | alex-morgan-jazz-cafe-morning-music-556238.mp3 | alex-morgan | 556238 |
+| `jazz/mellow-sax/jazz-cocktail-lounge-px556246.mp3` | alex-morgan-jazz-cocktail-lounge-music-556246.mp3 | alex-morgan | 556246 |
+| `jazz/mellow-sax/jazz-rainy-night-px556239.mp3` | alex-morgan-jazz-rainy-night-music-556239.mp3 | alex-morgan | 556239 |
+| `jazz/mellow-sax/jazz-restaurant-px556244.mp3` | alex-morgan-jazz-restaurant-music-556244.mp3 | alex-morgan | 556244 |
+| `jazz/mellow-sax/jazz-relaxing-px588904.mp3` | aurec-relaxing-jazz-588904.mp3 | aurec | 588904 |
+| `jazz/mellow-sax/jazz-cool-px598432.mp3` | aurec-cool-jazz-598432.mp3 | aurec | 598432 |
+| `jazz/mellow-sax/jazz-elegant-px525518.mp3` | jazz-elegant.mp3 | waveloom | 525518（旧歌单里也有） |
+| `jazz/mellow-sax/jazz-west-coast-cafe-px348267.mp3` | West Coast Jazz.mp3 | tunetank | 348267（旧歌单里也有） |
+| `jazz/cocktail-hour/jazz-cocktail-bar-px556247.mp3` | alex-morgan-jazz-cocktail-bar-music-556247.mp3 | alex-morgan | 556247 |
+| `jazz/cocktail-hour/jazz-midnight-club-px563583.mp3` | alex-morgan-jazz-midnight-club-music-563583.mp3 | alex-morgan | 563583 |
+| `jazz/cocktail-hour/jazz-rainy-lounge-brass-px556235.mp3` | alex-morgan-jazz-rainy-lounge-music-556235.mp3 | alex-morgan | 556235 |
+| `jazz/cocktail-hour/jazz-rainy-night-px563584.mp3` | alex-morgan-jazz-rainy-night-music-563584.mp3 | alex-morgan | 563584 |
+| `jazz/cocktail-hour/jazz-restaurant-px563578.mp3` | alex-morgan-jazz-restaurant-music-563578.mp3 | alex-morgan | 563578 |
+| `jazz/cocktail-hour/jazz-study-px563581.mp3` | alex-morgan-jazz-study-music-563581.mp3 | alex-morgan | 563581 |
+| `jazz/cocktail-hour/jazz-smooth-coffee-shop-px568173.mp3` | alex-morgan-smooth-jazz-coffee-shop-568173.mp3 | alex-morgan | 568173 |
+| `jazz/lofi-jazz/jazz-lofi-px587555.mp3` | aurec-jazz-lofi-587555.mp3 | aurec | 587555 |
+| `jazz/lofi-jazz/jazz-lofi-px596980.mp3` | velariomusic-lofi-jazz-596980.mp3 | velariomusic | 596980 |
+| `jazz/lofi-jazz/jazz-lofi-px582886.mp3` | zephiramusic-lofi-jazz-582886.mp3 | zephiramusic | 582886 |
+| `jazz/lofi-jazz/jazz-lounge-beat-px589986.mp3` | atlasaudio-jazz-lounge-589986.mp3 | atlasaudio | 589986 |
+| `jazz/lofi-jazz/jazz-smooth-beat-px589997.mp3` | atlasaudio-smooth-jazz-589997.mp3 | atlasaudio | 589997 |
+| `jazz/lofi-jazz/jazz-light-tread-px594985.mp3` | ornave-jazz-light-tread-594985.mp3 | ornave | 594985 |
+| `jazz/lofi-jazz/jazz-beat-px490623.mp3` | jazz.mp3 | atlasaudio | 490623（旧歌单里也有） |
+| `jazz/lofi-jazz/jazz-sunny-cafe-nu-jazz-px587413.mp3` | alex-morgan-jazz-song-sunny-cafe-nu-jazz-587413.mp3 | alex-morgan | 587413 |
+| `jazz/guitar-patio/jazz-guitar-px576304.mp3` | andriih-jazz-jazz-music-576304.mp3 | andriih | 576304 |
+| `jazz/guitar-patio/jazz-coffee-guitar-px593167.mp3` | aurec-coffee-jazz-593167.mp3 | aurec | 593167 |
+| `jazz/guitar-patio/jazz-cafe-guitar-px585969.mp3` | aurec-jazz-cafe-585969.mp3 | aurec | 585969 |
+| `jazz/guitar-patio/jazz-guitar-drums-px495626.mp3` | jazz2.mp3 | freemusicforvideo | 495626（旧歌单里也有） |
+| `jazz/guitar-patio/jazz-cafe-guitar-px496552.mp3` | jazz-cafe2.mp3 | the_mountain | 496552（旧歌单里也有） |
+| `jazz/swing-time/jazz-swing-study-session-px568162.mp3` | alex-morgan-swing-jazz-study-session-568162.mp3 | alex-morgan | 568162 |
+| `jazz/swing-time/jazz-upbeat-px589698.mp3` | aurec-upbeat-jazz-589698.mp3 | aurec | 589698 |
+| `jazz/swing-time/jazz-brass-band-px485401.mp3` | jazz-jazz-music3.mp3 | tatamusic | 485401（旧歌单里也有） |
+| `jazz/swing-time/jazz-old-time-px515630.mp3` | jazz-jazz-music2.mp3 | starostin | 515630（旧歌单里也有） |
+| `jazz/swing-time/jazz-busy-cafe-px516774.mp3` | jazz-cafe.mp3 | waveloom | 516774（旧歌单里也有） |
+| `jazz/swing-time/jazz-new-orleans-club-px164472.mp3` | jazz-club.mp3 | paoloargento | 164472（旧歌单里也有） |
 
 ## 许可的要点
 

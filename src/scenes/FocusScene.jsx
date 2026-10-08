@@ -24,13 +24,15 @@ function FocusScene({ copy, lang, plan, seat, drinkName, session, sound, mixerOp
   const breakIntervention = seat ? BREAK_INTERVENTIONS[seat.id] : null;
 
   // The music player card: open by hand, or kept open while YouTube plays (its video has
-  // to stay on screen), in which case closing it pauses the station.
+  // to stay on screen), in which case closing it pauses the station. Jazz keeps playing
+  // behind a collapsed card.
   const [playerOpen, setPlayerOpen] = useState(false);
-  const musicPlaying = sound.enabled && (sound.layerMix.youtube ?? 0) > 0;
-  const playerExpanded = playerOpen || musicPlaying;
+  const youtubePlaying = sound.enabled && (sound.layerMix.youtube ?? 0) > 0;
+  const musicPlaying = youtubePlaying || (sound.enabled && (sound.layerMix.jazz ?? 0) > 0);
+  const playerExpanded = playerOpen || youtubePlaying;
   const togglePlayer = () => {
     if (playerExpanded) {
-      if (musicPlaying) sound.updateLayer("youtube", 0);
+      if (youtubePlaying) sound.updateLayer("youtube", 0);
       setPlayerOpen(false);
     } else {
       setPlayerOpen(true);

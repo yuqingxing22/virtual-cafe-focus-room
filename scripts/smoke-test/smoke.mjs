@@ -80,20 +80,21 @@ try {
   check("morning: birdsong slider", (await sliderValue("Birdsong")) === "0.4", `value ${await sliderValue("Birdsong")}`);
   check("music player bar", (await page.locator(".music-player").count()) === 1 && (await page.locator(".player-full").count()) === 0);
   await page.locator(".music-player .player-now").click();
-  check("player opens with the stations", (await page.locator(".music-player .station-list button").count()) >= 4);
-  await page.locator(".music-player .player-button").last().click();
+  check("player opens with the sources", (await page.locator(".music-player .sources button").count()) === 7);
+  await page.locator(".music-player .player-mini .player-button").last().click();
   check("player collapses", (await page.locator(".player-full").count()) === 0);
   await page.locator(".mixer-toggle").click();
   check("YouTube slider present", (await sliderValue("YouTube")) !== null);
   await page.locator(".side-close").click();
 
-  // Jazz is either paused (notice, no controls, no jazz requests) or on (slider and three playlists).
-  const jazzPaused = (await page.locator(".layer-paused").count()) === 1;
-  if (jazzPaused) {
-    check("jazz paused: notice instead of controls", (await sliderValue("Soft jazz")) === null && (await page.locator(".jazz-modes button").count()) === 0, await text(".layer-paused p"));
-  } else {
-    check("jazz on: slider and three playlists", (await sliderValue("Soft jazz")) !== null && (await page.locator(".jazz-modes button").count()) === 3);
-  }
+  // Jazz plays through the music player: six stations, and a volume slider in the mixer.
+  const jazzPaused = false;
+  await page.locator(".music-player .player-now").click();
+  check("jazz: six stations and YouTube in the player", (await page.locator(".music-player .sources button").count()) === 7);
+  await page.locator(".music-player .player-mini .player-button").last().click();
+  await page.locator(".mixer-toggle").click();
+  check("jazz: volume slider in the mixer, no old mode buttons", (await sliderValue("Soft jazz")) !== null && (await page.locator(".jazz-modes button").count()) === 0);
+  await page.locator(".side-close").click();
 
   await btn("Pause").click();
   const paused = await text(".timer-display");
@@ -183,6 +184,7 @@ try {
     check("error reporting chunk loaded", requests.some((u) => /errorReporting-.*\.js/.test(u)));
   }
   if (jazzPaused) check("no jazz file requested", !names.some((n) => n.startsWith("jazz/")));
+  else check("window seat: soft jazz requested from the stations", names.some((n) => /^jazz\/[a-z-]+\/jazz-.*\.mp3$/.test(n)), names.filter((n) => n.startsWith("jazz/")).join(" "));
   check("slot recordings requested", ["cafe-morning.mp3", "birds-morning.mp3", "rain-light.mp3", "street-light.mp3", "cafe-night.mp3"].every((n) => names.includes(n)), names.join(" "));
   check("no error reports sent", !requests.some((u) => u.includes("ingest.us.sentry.io")));
   check("no failed requests", failed.length === 0, failed.slice(0, 4).join(" | "));

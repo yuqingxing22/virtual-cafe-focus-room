@@ -63,6 +63,9 @@ try {
   await btn("Sit down").click();
   await page.locator(".task-field input").fill("smoke test");
   check("setup has three time slots", (await page.locator(".setup-panel .time-slots button").count()) === 3);
+  await page.locator(".custom-duration input").fill("3");
+  check("custom length out of range: hint and no start", (await text(".field-hint")).length > 0 && (await btn("Start working").isDisabled()), await text(".field-hint"));
+  await page.locator(".custom-duration input").fill("");
   await btn("Morning", page.locator(".setup-panel")).click();
   await btn("Put my phone away").click();
   await btn("Open my laptop").click();

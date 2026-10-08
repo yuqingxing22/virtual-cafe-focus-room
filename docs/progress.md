@@ -62,6 +62,7 @@
 
 ### 2026-10-08
 
+- PR #26 界面重做第 8 步：文案。把原型 `docs/prototype/index.html` 里 `COPY` 的中英文整套搬进 `src/data/copy.js`（页面文案、状态句、暂停提醒和休息提议的台词、完成页）和 `src/data/catalog.js`（饮品和座位的名字、一句描述）。原则：短句，口语，像店里的人在说话；中文引用任务改用「」。没动的：`jazzPaused`、YouTube 相关提示、集点卡文案、无障碍标签。按钮文字变了的几处同步改了 `scripts/smoke-test/smoke.mjs` 和 `scripts/visual-check/walk.mjs`：Enter the Café 变 Step inside，Window Seat 变 Window seat，Start Working 变 Start working，推门进入变推门进去，去选座位变去挑座位，美式咖啡变美式，下次再来变再来一次。本地预览冒烟 29 项通过。
 - PR #25 界面重做第 1 步：页头、面板、手机底栏。按 `docs/hci-design.md` 第 2、4、5 节和原型做的。页头改成一行（桌面 56、手机 52 像素）：品牌、五段进度条带「2 / 5 吧台」文字和 `aria-current="step"`（`src/components/AppHeader.jsx`，旧的 `.progress-dots` 换成 `.progress-steps`）、36 像素的静音键、语言切换；手机上品牌只留图标。面板宽度统一：点单、设定、完成 720，选座 880 并改成两行两列。可选卡片选中时右上角多一个勾（`.choice-card.selected::after`）并带 `aria-pressed`。点单页只留一个咖啡师气泡，选完饮品后气泡里的话换成回应（`aria-live`），「去选座位」从一开始就在、选中前禁用，面板高度不再跳。选座卡片加三格「声音指纹」（人声、雨、街，直接读 `catalog.js` 的座位预设），选中座位时背景立刻换成该座位的专注页图（`getSceneMediaKey` 在选座场景返回 `focus_<seat>`）。手机：点单、选座、设定、完成四页的操作行变成固定在底部的操作栏（`.scene-actions` 在 640 像素以下 `position: fixed`，场景加底部留白），饮品两列（水独占一行）、座位两列、时长两列加自定义独占一行。冒烟测试不用改：`.ambience-switch`、`.site-note a`、按钮文字都没变；本地预览 29 项通过，桌面和手机各十个状态截图看过。没做的留给后面几步：设定页的标签和校验（第 3 步）、专注页（第 2 步）、文案（第 8 步）。
 
 ### 2026-10-07
@@ -186,7 +187,7 @@
 5. 场景过渡和入口的门。状态：待做。
 6. 完成页「再坐 N 分钟」。状态：待做。
 7. 透明播放器，先接 YouTube 来源，爵士等音频上了 R2 再开。状态：待做。
-8. 文案：把原型 `COPY` 里的中英文整套搬进 `src/data/copy.js` 和 `catalog.js`。可以和第 1 步一起做。状态：待做。
+8. 文案：把原型 `COPY` 里的中英文整套搬进 `src/data/copy.js` 和 `catalog.js`。状态：完成（PR #26）。
 
 ### 剩余
 

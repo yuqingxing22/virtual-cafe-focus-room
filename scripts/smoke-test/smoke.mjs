@@ -119,9 +119,22 @@ try {
   check("countdown completes on its own", (await text(".complete-panel .eyebrow")) === "Session complete", await text(".complete-panel .eyebrow"));
   check("stamp earned", (await page.locator(".complete-panel .stamp.filled").count()) === 1 && (await page.locator(".stamp.new").count()) === 1);
   check("saved session cleared", (await page.evaluate(() => localStorage.getItem("cafe-focus-session"))) === null);
+  check("stay-another button carries the length", (await btn("Stay another 45 minutes").count()) === 1);
+  await btn("Stay another 45 minutes").click();
+  await sleep(1200);
+  check("stay another: back at the same table", (await text("#focus-title")) === "smoke test" && /^4[45]:/.test(await text(".timer-display")), `${await text("#focus-title")} ${await text(".timer-display")}`);
+  await page.locator(".mixer-toggle").click();
+  check("stay another: seat sound kept", (await sliderValue("Birdsong")) === null && (await text(".mixer .time-slots button.active")) === "Night", await text(".mixer .time-slots button.active"));
+  await page.locator(".side-close").click();
+  await page.evaluate(() => {
+    const real = Date.now.bind(Date);
+    Date.now = () => real() + 92 * 60 * 1000;
+  });
+  await sleep(1800);
+  check("second session completes too", (await text(".complete-panel .eyebrow")) === "Session complete", await text(".complete-panel .eyebrow"));
   await btn("Visit again").click();
   await sleep(500);
-  check("returning visitor at the entrance", (await text(".eyebrow")).includes("visit 2"), await text(".eyebrow"));
+  check("returning visitor at the entrance", (await text(".eyebrow")).includes("visit 3"), await text(".eyebrow"));
 
   // Chinese copy and the phone layout.
   await btn("中文").click();

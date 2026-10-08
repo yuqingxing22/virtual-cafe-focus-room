@@ -310,8 +310,14 @@
     min-height: 48px;
   }
 
+  /* The main action takes a full row; the other button sits under it. */
+  .scene-actions {
+    flex-wrap: wrap;
+  }
+
   .scene-actions .primary-action {
-    flex: 2;
+    flex-basis: 100%;
+    order: -1;
   }
 }
 

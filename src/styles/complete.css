@@ -17,6 +17,10 @@
   font-size: 1.05rem;
 }
 
+.complete-panel .secondary-action {
+  gap: 10px;
+}
+
 @media (max-width: 640px) {
   .complete-panel {
     padding: 20px;

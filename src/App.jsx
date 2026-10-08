@@ -96,6 +96,13 @@ function App() {
     playDrinkCue(id);
   };
 
+  // Same table, same task, another session of the same length. Inside the click so the
+  // room can start sounding again.
+  const stayAgain = () => {
+    if (sound.ambiencePref === "on") sound.ensureAudio();
+    session.start();
+  };
+
   const resetCafe = () => {
     session.reset();
     sound.stopAudio();
@@ -168,6 +175,7 @@ function App() {
             task={task}
             minutes={effectiveDuration}
             session={session}
+            onStayAgain={stayAgain}
             onVisitAgain={resetCafe}
           />
         );

@@ -1,7 +1,8 @@
 import { DoorOpen } from "lucide-react";
 import StampCard from "../components/StampCard.jsx";
 
-// Outside the café: the title, the door, and the stamp card for returning visitors.
+// Outside the café: the title, the door, and the stamp card for returning visitors. The
+// door in the picture is a pointer-only hotspot for the same action as the button.
 function EntranceScene({ copy, visits, onEnter }) {
   return (
     <section className="scene entrance-scene" aria-labelledby="entrance-title">
@@ -11,6 +12,9 @@ function EntranceScene({ copy, visits, onEnter }) {
         </p>
         <h1 id="entrance-title">{copy.entranceTitle}</h1>
         <p className="scene-lede">{copy.entranceLead}</p>
+        <p className="presence-line" aria-label={copy.presenceAria}>
+          {copy.presence.join(" · ")}
+        </p>
         <button className="primary-action" type="button" onClick={onEnter}>
           <DoorOpen aria-hidden="true" />
           {copy.enterCafe}
@@ -28,11 +32,14 @@ function EntranceScene({ copy, visits, onEnter }) {
           </a>
         </p>
       </div>
-      <div className="presence-strip" aria-label={copy.presenceAria}>
-        {copy.presence.map((item) => (
-          <span key={item}>{item}</span>
-        ))}
-      </div>
+      <button
+        className="door-hotspot"
+        type="button"
+        tabIndex={-1}
+        aria-hidden="true"
+        title={copy.enterCafe}
+        onClick={onEnter}
+      />
     </section>
   );
 }

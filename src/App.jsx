@@ -11,12 +11,15 @@ import { useSoundscape } from "./hooks/useSoundscape.js";
 import { formatTime } from "./lib/format.js";
 import { readSavedSession } from "./lib/session.js";
 import { readStored, writeStored } from "./lib/storage.js";
+import { AnimatePresence, motion, sceneFade } from "./motion/index.js";
 import CompleteScene from "./scenes/CompleteScene.jsx";
 import EntranceScene from "./scenes/EntranceScene.jsx";
 import FocusScene from "./scenes/FocusScene.jsx";
 import OrderScene from "./scenes/OrderScene.jsx";
 import SeatScene from "./scenes/SeatScene.jsx";
 import SetupScene from "./scenes/SetupScene.jsx";
+
+const DOOR_MS = 800;
 
 // The visit runs entrance -> order -> seat -> setup -> focus -> complete. App owns which scene
 // is showing and what the visitor chose; the countdown lives in useFocusSession, everything
@@ -39,6 +42,8 @@ function App() {
     restored ? { phone: true, laptop: true } : { phone: false, laptop: false },
   );
   // The mixer is an overlay on the focus scene (a bottom sheet on phones); remembered per device.
+  // True while the door is swinging: the room darkens and leans in before the next scene.
+  const [doorOpen, setDoorOpen] = useState(false);
   const [mixerOpen, setMixerOpen] = useState(
     () => readStored("cafe-focus-mixer-open", "0", (value) => value === "0" || value === "1") === "1",
   );
@@ -82,13 +87,22 @@ function App() {
     };
   }, [scene, session.remaining, task, copy.appName]);
 
+  // The door: darken and lean in for 800 ms, then change scene while the bell rings.
+  const throughTheDoor = (next) => {
+    setDoorOpen(true);
+    window.setTimeout(() => {
+      next();
+      setDoorOpen(false);
+    }, DOOR_MS);
+  };
+
   const enterCafe = () => {
     // Inside the click so autoplay rules allow it; the room is audible from the door.
     if (sound.ambiencePref === "on") sound.ensureAudio();
     playTimedCue(CUE_SOUNDS.steps, 0.18, 3600);
     window.setTimeout(() => playCue(CUE_SOUNDS.woodenDoor, 0.36), 450);
     window.setTimeout(() => playCue(CUE_SOUNDS.door, 0.44), 800);
-    setScene("order");
+    throughTheDoor(() => setScene("order"));
   };
 
   const pickDrink = (id) => {
@@ -103,17 +117,21 @@ function App() {
     session.start();
   };
 
+  // Everything resets once the door has closed, so the complete scene keeps its text
+  // while it fades out.
   const resetCafe = () => {
-    session.reset();
-    sound.stopAudio();
-    sound.resetToCounter();
-    setScene("entrance");
-    setDrink(null);
-    setSeat(null);
-    setTask("");
-    setDuration(45);
-    setCustomDuration("");
-    setRitual({ phone: false, laptop: false });
+    throughTheDoor(() => {
+      session.reset();
+      sound.stopAudio();
+      sound.resetToCounter();
+      setScene("entrance");
+      setDrink(null);
+      setSeat(null);
+      setTask("");
+      setDuration(45);
+      setCustomDuration("");
+      setRitual({ phone: false, laptop: false });
+    });
   };
 
   const renderScene = () => {
@@ -183,7 +201,7 @@ function App() {
   };
 
   return (
-    <main className={`app scene-${scene}`}>
+    <main className={`app scene-${scene}${doorOpen ? " door-open" : ""}`}>
       <SceneBackdrop media={sceneMedia} />
       <div className="background-shade" aria-hidden="true" />
       <AppHeader
@@ -194,7 +212,11 @@ function App() {
         ambienceOn={sound.enabled}
         onToggleAmbience={sound.toggleAmbience}
       />
-      {renderScene()}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div className="scene-frame" key={scene} variants={sceneFade} initial="hidden" animate="shown" exit="exit">
+          {renderScene()}
+        </motion.div>
+      </AnimatePresence>
     </main>
   );
 }

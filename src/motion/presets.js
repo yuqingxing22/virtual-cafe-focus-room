@@ -34,6 +34,14 @@ export const sceneChange = {
   exit: { opacity: 0, transition: { duration: DURATION.base, ease: EASE.gentle } },
 };
 
+// Scene wrapper: opacity only, so the wrapper never carries a transform (a transform would
+// become the containing block of the fixed bars inside the scenes on phones).
+export const sceneFade = {
+  hidden: { opacity: 0 },
+  shown: { opacity: 1, transition: { duration: DURATION.slow, ease: EASE.gentle } },
+  exit: { opacity: 0, transition: { duration: DURATION.base, ease: EASE.gentle } },
+};
+
 // Parent of a list (drinks, seats): children rise one after another.
 export const stagger = (step = 0.05, delay = 0) => ({
   hidden: {},

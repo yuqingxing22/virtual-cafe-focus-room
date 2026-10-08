@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import { MotionRoot } from "./motion/index.js";
 import "./styles.css";
 
 // Cloudflare Web Analytics: cookie-free, aggregate page views. Only loads when a token is
@@ -29,7 +30,9 @@ if (import.meta.env.PROD && sentryDsn) {
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      <MotionRoot>
+        <App />
+      </MotionRoot>
     </ErrorBoundary>
   </StrictMode>,
 );

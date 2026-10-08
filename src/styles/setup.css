@@ -1,15 +1,64 @@
-/* Setup scene: task field, durations, ritual list, session summary. */
+/* Setup scene: receipt, task field, durations with an inline custom length, time of day,
+   optional rituals. */
+
+.receipt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.receipt-change {
+  border: 0;
+  background: none;
+  color: #efcf94;
+  padding: 0;
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 
 .task-field {
   display: grid;
   gap: 8px;
-  margin-top: 28px;
+  margin-top: 20px;
 }
 
-.task-field span {
+.task-field span,
+.field-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   color: #efcf94;
   font-size: 0.86rem;
   font-weight: 800;
+}
+
+.field-label small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.setup-field {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.field-hint {
+  min-height: 18px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.field-hint.bad {
+  color: #f0a6a6;
 }
 
 .task-field input,
@@ -34,7 +83,6 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 18px;
 }
 
 .duration {
@@ -43,27 +91,37 @@
 }
 
 .custom-duration {
-  position: relative;
-}
-
-.custom-duration svg {
-  position: absolute;
-  top: 15px;
-  left: 12px;
-  width: 19px;
-  height: 19px;
-  color: var(--street-blue);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
 }
 
 .custom-duration input {
-  padding-left: 40px;
+  min-width: 0;
+  flex: 1;
+  min-height: 48px;
+  padding: 0 10px;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.custom-duration input::-webkit-outer-spin-button,
+.custom-duration input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.custom-duration input[aria-invalid="true"] {
+  border-color: #e0896b;
 }
 
 .ritual-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  margin-top: 22px;
 }
 
 .ritual-item {
@@ -110,5 +168,5 @@
 }
 
 .setup-panel .time-slots {
-  margin: 14px 0 0;
+  margin: 0;
 }

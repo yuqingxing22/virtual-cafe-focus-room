@@ -1,8 +1,9 @@
-import { TimerReset } from "lucide-react";
+import { Play, TimerReset } from "lucide-react";
 import StampCard from "../components/StampCard.jsx";
 
-// After the session: what you stayed with, and the stamp card if the visit counted.
-function CompleteScene({ copy, task, minutes, session, onVisitAgain }) {
+// After the session: what you stayed with, the stamp card if the visit counted, and two
+// ways on: stay for another session of the same length at the same table, or leave.
+function CompleteScene({ copy, task, minutes, session, onStayAgain, onVisitAgain }) {
   const { sessionResult, lastVisit } = session;
   return (
     <section className="scene complete-scene" aria-labelledby="complete-title">
@@ -21,9 +22,13 @@ function CompleteScene({ copy, task, minutes, session, onVisitAgain }) {
           />
         )}
         <div className="scene-actions">
-          <button className="primary-action compact" type="button" onClick={onVisitAgain}>
+          <button className="secondary-action" type="button" onClick={onVisitAgain}>
             <TimerReset aria-hidden="true" />
             {copy.visitAgain}
+          </button>
+          <button className="primary-action compact" type="button" onClick={onStayAgain}>
+            <Play aria-hidden="true" />
+            {copy.stayAgain(minutes)}
           </button>
         </div>
       </div>

@@ -267,10 +267,15 @@
 }
 
 @media (max-width: 640px) {
+  /* No backdrop-filter on phones: it would make the panel the containing block of the
+     fixed bottom bar inside it, pinning the bar to the panel instead of the viewport. */
   .dialogue-panel,
   .wide-panel,
-  .setup-panel {
+  .setup-panel,
+  .complete-panel {
     padding: 20px 16px;
+    background: var(--glass-strong);
+    backdrop-filter: none;
   }
 
   .choice-grid {

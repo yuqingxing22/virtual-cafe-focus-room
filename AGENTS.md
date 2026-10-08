@@ -31,6 +31,7 @@
 
 ## 设计改动要知道的
 
+- 每一页的布局和交互规格在 `docs/hci-design.md`，用户认可的可点击原型在 `docs/prototype/index.html`，新的中英文文案在原型的 `COPY` 对象里；改页面照这两份做。
 - 开始做设计前先读 `docs/design-suggestions.md`：Claude 写的沉浸感建议、iPod 播放器在哪里，以及改动时要保住的东西（冒烟测试依赖的文字和类名、第一次出声必须在点击里等）。
 - 样式在 `src/styles/`，按用途分文件：`base.css`（颜色变量在开头的 `:root`，还有字体）、`layout.css`（背景、页头）、`controls.css`（按钮、面板、选项卡片）、每个场景一个文件（`entrance`、`order`、`seat`、`setup`、`focus`、`complete`）、`mixer.css`、`stamp-card.css`。`src/styles.css` 只是按顺序 `@import` 它们，顺序就是层叠顺序：后面的文件在优先级相同时覆盖前面的，新文件要加进这个列表。响应式规则（980px、640px）写在各自文件末尾的 `@media` 里。文案在 `src/data/copy.js`，中英文都要写。
 - 每个场景的页面结构在 `src/scenes/`（入口、点单、选座、设定、专注、完成各一个文件），页头、混音器等在 `src/components/`。状态和计时逻辑在 `src/hooks/`，改外观一般不需要动它。

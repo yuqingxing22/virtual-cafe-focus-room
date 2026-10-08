@@ -176,3 +176,85 @@ body.is-quiet .music-player {
     pointer-events: none;
   }
 }
+
+/* Jazz source: cover, track, progress and transport. */
+.player-cover svg {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
+.station-list.sources .source-youtube {
+  margin-left: auto;
+  border-style: dashed;
+}
+
+.player-track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.player-track-cover {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  border-radius: 12px;
+}
+
+.player-track-text {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.player-track-text strong {
+  overflow: hidden;
+  font-size: 0.98rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-track-text span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.player-track-blurb {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.player-progress {
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgba(247, 239, 227, 0.18);
+}
+
+.player-progress i {
+  display: block;
+  height: 100%;
+  background: var(--amber);
+  transition: width 250ms linear;
+}
+
+.player-times {
+  margin-top: -6px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.player-controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.player-controls .player-button {
+  background: rgba(255, 248, 237, 0.06);
+}

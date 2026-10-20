@@ -63,7 +63,7 @@
 
 ### 2026-10-20
 
-- PR #PRNUM 规则文件补上命令、架构和运维。用户跑了 `/init`，让 Claude 自己决定怎么写，并要求把运维也写进去。`CLAUDE.md`：开头加了 Claude Code 要求的英文说明；新增「常用命令」（dev、两种构建、预览、没有测试和 lint、冒烟测试、视觉对比、转图）、「架构」（场景流程、hooks 分工、单一音乐槽位、`audioPath`、文案位置、样式层叠、`position: fixed` 包含块的坑、统计和 Sentry 的加载条件、localStorage）；「部署和音频」扩成「部署和运维」（部署链路、线上验证、R2 上传和清缓存、Cloudflare token、监控、回滚、历史重写），内容都取自本文件的工作约定和改动日志，没有新事实。爵士那条规则按 PR #33 之后的现状改写：旧三个歌单的代码和文件仍然不删，藏在 `JAZZ_ENABLED = false` 后面，线上爵士是播放器里的六个电台，和 YouTube 互斥。`AGENTS.md` 同步：爵士规则同样改写；隐私那条改成和 `public/privacy.html` 一致（统计、错误报告、YouTube 播放器是仅有的外发）；第 1 步不再写 `git checkout main && git pull`，改成从 `origin/main` 开分支并指向 worktree 办法；新增「常用命令」；结尾指向 `CLAUDE.md` 的运维一节。只改文档，线上行为不变。
+- PR #35 规则文件补上命令、架构和运维。用户跑了 `/init`，让 Claude 自己决定怎么写，并要求把运维也写进去。`CLAUDE.md`：开头加了 Claude Code 要求的英文说明；新增「常用命令」（dev、两种构建、预览、没有测试和 lint、冒烟测试、视觉对比、转图）、「架构」（场景流程、hooks 分工、单一音乐槽位、`audioPath`、文案位置、样式层叠、`position: fixed` 包含块的坑、统计和 Sentry 的加载条件、localStorage）；「部署和音频」扩成「部署和运维」（部署链路、线上验证、R2 上传和清缓存、Cloudflare token、监控、回滚、历史重写），内容都取自本文件的工作约定和改动日志，没有新事实。爵士那条规则按 PR #33 之后的现状改写：旧三个歌单的代码和文件仍然不删，藏在 `JAZZ_ENABLED = false` 后面，线上爵士是播放器里的六个电台，和 YouTube 互斥。`AGENTS.md` 同步：爵士规则同样改写；隐私那条改成和 `public/privacy.html` 一致（统计、错误报告、YouTube 播放器是仅有的外发）；第 1 步不再写 `git checkout main && git pull`，改成从 `origin/main` 开分支并指向 worktree 办法；新增「常用命令」；结尾指向 `CLAUDE.md` 的运维一节。只改文档，线上行为不变。
 
 ### 2026-10-08
 

@@ -8,7 +8,7 @@
 
 `main` 有分支保护，直接 push 会被拒绝。每项改动这样做：
 
-1. `git checkout main && git pull`，再 `git checkout -b <类型>/<简短描述>`，例如 `design/entrance-typography`、`ops/uptime-notes`。
+1. 从最新的 `origin/main` 开分支 `<类型>/<简短描述>`，例如 `design/entrance-typography`、`ops/uptime-notes`。共用文件夹里有别的助手时用下面的 worktree 办法，不要在共用文件夹里切分支。
 2. 改动，`npm run build` 必须通过。
 3. `npx vite preview --port 4173` 起本地预览，在浏览器里实际走一遍相关流程。设计改动要在桌面宽度和 390px 手机宽度各看一遍。
 4. commit，`git push -u origin <分支>`，`gh pr create` 开 PR，说明改了什么、怎么验证的。
@@ -23,11 +23,18 @@
 ## 不要做的事
 
 - 不要自己压缩、裁剪或替换音频文件。用户要的是完整的真实录音。线上的环境音由 `scripts/process-ambience.py` 按用户确认过的方案生成，换素材或改裁剪点要先问用户，并更新 `docs/audio-credits.md`。新素材必须有允许公开网站使用的许可，不能从 YouTube 抓。
-- 不要删掉三个爵士歌单；爵士和 YouTube 电台是两条互斥的滑块，这是用户定的。
+- 不要删掉旧的三个爵士歌单（cafe、swing、club）的代码和文件。它们藏在 `src/lib/music.js` 的 `JAZZ_ENABLED = false` 后面，这个开关只管旧的内置歌单引擎；线上的爵士是播放器（`MusicPlayer.jsx`）里的六个电台。爵士和 YouTube 共用一个音乐槽位，互斥，不是替代关系，这是用户定的。
 - 不要改 `to-do.md`，那是用户自己保存的原始评审。
 - 不要重命名或删除已有文件（包括 `public/` 里的 PNG 母版），除非用户同意。
-- 不要引入会把用户数据发到服务器的东西。现在所有数据只存在浏览器本地，`public/privacy.html` 里是这样承诺的。要加统计、字体 CDN、第三方脚本之前先问用户，并同步更新隐私说明。
+- 不要引入会把用户数据发到服务器的东西。访客的设置和记录只存在浏览器本地；发出去的只有不用 cookie 的访问统计（Cloudflare Web Analytics）、不含访客操作的错误报告（Sentry），以及访客自己打开 YouTube 电台时从 youtube-nocookie.com 加载的播放器，`public/privacy.html` 里是这样承诺的。要再加统计、字体 CDN、第三方脚本之前先问用户，并同步更新隐私说明。
 - 不要提交任何密钥。Cloudflare 和 GitHub 的凭据都在用户本机，不进仓库。
+
+## 常用命令
+
+- `npm run dev` 本地开发，音频读 `public/audio/`（不在 git 里，本地要自己放一份）。没有 npm 时用 `./scripts/dev.sh`。
+- `npm run build` 是 CI 唯一的检查；`npx vite preview --port 4173 --strictPort` 预览构建结果。
+- 没有单元测试和 lint 配置。验证靠浏览器走流程，加上 `scripts/smoke-test/smoke.mjs`（部署后对线上跑，也能对本地预览跑，用法见同目录 README）。改了冒烟测试依赖的文案或结构，同一个 PR 里改对应检查。
+- 不改外观和行为的重构用 `scripts/visual-check/` 对比前后两份构建，见 `docs/progress.md` 的工作约定。
 
 ## 设计改动要知道的
 
@@ -43,4 +50,4 @@
 
 ## 出问题时
 
-回滚方法写在 `docs/progress.md` 的「回滚」一节。线上坏了先回滚，再查原因。
+回滚方法写在 `docs/progress.md` 的「回滚」一节。线上坏了先回滚，再查原因。部署、R2 音频、Cloudflare 和监控由 Claude 负责，要点在 `CLAUDE.md` 的「部署和运维」一节。

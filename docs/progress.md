@@ -61,6 +61,10 @@
 
 ## 改动日志
 
+### 2026-10-20
+
+- PR #35 规则文件补上命令、架构和运维。用户跑了 `/init`，让 Claude 自己决定怎么写，并要求把运维也写进去。`CLAUDE.md`：开头加了 Claude Code 要求的英文说明；新增「常用命令」（dev、两种构建、预览、没有测试和 lint、冒烟测试、视觉对比、转图）、「架构」（场景流程、hooks 分工、单一音乐槽位、`audioPath`、文案位置、样式层叠、`position: fixed` 包含块的坑、统计和 Sentry 的加载条件、localStorage）；「部署和音频」扩成「部署和运维」（部署链路、线上验证、R2 上传和清缓存、Cloudflare token、监控、回滚、历史重写），内容都取自本文件的工作约定和改动日志，没有新事实。爵士那条规则按 PR #33 之后的现状改写：旧三个歌单的代码和文件仍然不删，藏在 `JAZZ_ENABLED = false` 后面，线上爵士是播放器里的六个电台，和 YouTube 互斥。`AGENTS.md` 同步：爵士规则同样改写；隐私那条改成和 `public/privacy.html` 一致（统计、错误报告、YouTube 播放器是仅有的外发）；第 1 步不再写 `git checkout main && git pull`，改成从 `origin/main` 开分支并指向 worktree 办法；新增「常用命令」；结尾指向 `CLAUDE.md` 的运维一节。只改文档，线上行为不变。
+
 ### 2026-10-08
 
 - 清理本机和远端（没有 PR 的运维，记一笔）：删掉三个已经全部合并的 worktree，`../virtual_cafe_focus_room-d4`、`../virtual_cafe_focus_room-f1`（两个都干净、detached）和 7 月的 `virtual_cafe_focus_room.worktrees/coffee-shop-improvements-ideas`（历史重写之前的分支，5 个 commit 都已在 main 上用别的方式做完）；最后那个里有从没提交过的 3D 咖啡馆方案文档、插画素材、`src/cafe3d/`、Playwright 测试，已原样复制到 `~/Downloads/_archive/cafe-coffee-shop-improvements-ideas-2026-07/`（带 README 和未提交改动的 patch），里面重写前的旧音频按 PR #18 的决定没有复制。删了本地分支 `feat/ipod-player`、`agents/coffee-shop-improvements-ideas` 和所有 PR 已合并的远端分支，远端现在只剩 `main` 和 `gh-pages`。主文件夹里删了可重新生成的 `dist/`，跑了一次默认的 `git gc`。没动 `-ops` worktree、`public/audio/`、`jazz-music/`、`freesound/`、`sound-effect/`、`pixabay/` 和 R2。d4 session 在删之前确认过它的 worktree 没有未提交的东西并停掉了开发服务器。
